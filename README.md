@@ -1,15 +1,63 @@
 # Human Web Calculator
 
-A powerful web-based calculator that allows users to write prose mixed with arithmetic expressions. The calculator evaluates expressions line by line and provides a total sum.
+![Human Calculator Logo](./public/favicon.svg)
 
-## Features
+This easy-to-use web calculator lets you mix regular text with math problems in a natural way. Just type something like "Bottles 2 boxes @ 10k" and it automatically calculates 20,000. It works line by line, showing results for each line plus a grand total at the bottom. You can use simple or complex math expressions, and even highlight parts of your text to see quick calculations. Perfect for shopping lists, budgets, or any quick math needs. No internet needed - works 100% offline in your browser! ✈️
 
-- Free-form textarea accepts prose + arithmetic
-- Live per-line results & overall total row
-- Highlighted selection → persistent banner
-- Variable assignments (`subtotal = 15*3`)
-- Label-stripping so `tape (140*25)` works
-- Dark mode switch (class-based Tailwind)
+## 📸 Screenshot
+
+![Human Calculator Screenshot](./HumanCalculator_screenshot.png)
+
+## ✨ Features
+
+**🔢 Core Calculation & Input:**
+
+- **📝 Free-form Input:** Accepts a mix of text and arithmetic expressions in a flexible textarea.
+- **📊 Line-by-Line Evaluation:** Processes calculations on each line, showing individual results.
+- **💯 Live Total:** Displays a continuously updated overall sum of all calculations.
+- **🏷️ Label Handling:** Intelligently processes lines with labels, extracting and calculating arithmetic parts (e.g., `tape (140*25)` will calculate `140*25`).
+- **💬 Comment Support:** Lines starting with `//` are ignored, allowing for comments within the calculations.
+- **🔍 Pattern Recognition:** Automatically recognizes and processes various text patterns:
+  - Decimal with k/m suffix (e.g., "1.2k x 300")
+  - Descriptive formats (e.g., "300 people × 1,200 bottles each")
+  - Currency notations (e.g., "300 bottles @ UGX 1,200")
+  - Percentage calculations
+  - Fraction handling
+- **🧹 Expression Sanitization:** Cleans up expressions to improve parsing reliability.
+
+**🎨 User Interface & Experience:**
+
+- **🌓 Dark Mode:** Toggle between light and dark themes for user comfort.
+- **✏️ Selection Calculation:** Highlight any part of the text to see a calculation result for just the selected portion in a persistent banner.
+- **📱 Responsive Design:** Adapts to different screen sizes for usability.
+- **🔌 Offline Functionality:** Works completely offline with no internet connection required, with all calculations performed locally in the browser.
+
+**📚 Workbook Management:**
+
+- **✏️ Workbook Naming:** Set and change the name of the current workbook.
+- **🆕 New Workbook:** Easily create a new, empty workbook.
+- **💾 Save Workbook:** Save the current workbook (text, name) locally in the browser.
+- **📂 Load Workbook:** Open previously saved workbooks.
+- **📤 Import/Export Workbooks:** Import and export workbook data.
+
+**📊 Data Handling & Sharing:**
+
+- **📤 Export Results:** Export calculation results in various formats:
+  - **📄 PDF:** Save calculations as a PDF document.
+  - **📊 Excel (XLSX):** Export data to an Excel spreadsheet.
+  - **🖼️ Image:** Capture and save the calculation area as an image.
+- **⏱️ Calculation History:**
+  - View a history of past calculations (up to 50 entries).
+  - Save the current state (text, total, date) to history.
+  - Load a calculation from history back into the main editor.
+  - Delete entries from history.
+- **📱 QR Code Generation:** Generate a QR code for the current selection or the entire workbook (including the total) for easy sharing or transfer.
+
+**🛠️ Development & Setup:**
+
+- 🔄 Built with React and Create React App.
+- 📜 Includes scripts for starting, testing, and building the application.
+- 🐳 Docker support for easy containerized deployment.
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
