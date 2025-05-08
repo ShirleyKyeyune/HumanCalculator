@@ -1,0 +1,114 @@
+.App {
+  text-align: center;
+  max-width: 100vw;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.App-logo {
+  height: 60px;
+  pointer-events: none;
+  margin-right: 15px;
+}
+
+.App-header {
+  background-color: #9f7aea;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.App-header-left {
+  display: flex;
+  align-items: center;
+}
+
+.App-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .App-header {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .App-header-right {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+.App-title {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: bold;
+}
+
+.App-main {
+  flex-grow: 1;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-bottom: 2rem;
+}
+
+.dark .App-header {
+  background-color: #6b46c1;
+}
+
+.dark-mode-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+}
+
+.dark-mode-button .mode-icon {
+  width: 20px;
+  height: 20px;
+  stroke: white;
+}
+
+.dark .dark-mode-button .mode-icon {
+  stroke: white;
+}
+
+/* Button icon styles */
+.button-icon {
+  width: 18px;
+  height: 18px;
+  stroke: white;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+
+.workbook-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.App-footer {
+  padding: 1rem;
+  font-size: 0.8rem;
+  color: #718096; /* gray-600 */
+  text-align: center;
+  border-top: 1px solid #e2e8f0; /* gray-300 */
+}
+
+.dark .App-footer {
+  color: #a0aec0; /* gray-500 */
+  border-top: 1px solid #4a5568; /* gray-700 */
+}
+
+.App-footer p {
+  margin: 0.25rem 0;
+}
