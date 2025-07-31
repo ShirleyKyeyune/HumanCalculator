@@ -21,7 +21,13 @@
     "start": "PORT=7842 react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "docker:build": "docker build -t human-calculator .",
+    "docker:run": "docker run -p 7842:7842 human-calculator",
+    "docker:start": "npm run docker:build && npm run docker:run",
+    "docker:dev": "docker run -d -p 7842:7842 --name human-calculator-dev human-calculator",
+    "docker:stop": "docker stop human-calculator-dev && docker rm human-calculator-dev",
+    "docker:clean": "docker rmi human-calculator"
   },
   "eslintConfig": {
     "extends": [

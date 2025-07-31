@@ -1,0 +1,8 @@
+- prefer to extract different features to own new file so that the main page is not too big and becomes easy to maintain and always add enough documentation or comments for junior devs to follow.
+- add tests for logical operations
+- avoid re-inventing the wheel
+- use existing libraries and tools to the maximum
+- always first make a plan and then implement
+- always use the latest version of libraries and tools
+- when naming files or variables, use generic names not specific example names
+- tests and actual should be using same pattern or files to avoid situations where tests are passing but actual implementation is failing

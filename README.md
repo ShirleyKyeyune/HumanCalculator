@@ -90,11 +90,63 @@ See the section about [deployment](https://facebook.github.io/create-react-app/d
 
 ## 🐳 Running with Docker
 
+### 🚀 Super Easy - One Command
+
+**One-liner (copy & paste):**
+
+```bash
+git clone https://github.com/ShirleyKyeyune/HumanCalculator.git && cd HumanCalculator && make quick-start
+```
+
+Using **Makefile** (recommended):
+
+```bash
+make quick-start
+```
+
+Using **npm scripts**:
+
+```bash
+npm run docker:start
+```
+
+Or using scripts:
+
+```bash
+./scripts/docker-quick-start.sh
+```
+
+### 📋 Individual Commands
+
+**Using Makefile:**
+
+- `make build` - Build Docker image
+- `make run` - Run the application
+- `make clean` - Remove Docker image
+- `make help` - Show all available commands
+
+**Using npm scripts:**
+
+- `npm run docker:build` - Build Docker image
+- `npm run docker:run` - Run the application
+- `npm run docker:dev` - Run in detached mode
+- `npm run docker:stop` - Stop detached container
+- `npm run docker:clean` - Remove Docker image
+
+**Using scripts:**
+
+- [`./scripts/docker-build.sh`](./scripts/docker-build.sh) - Build image
+- [`./scripts/docker-run.sh`](./scripts/docker-run.sh) - Run application
+
+### Manual Commands
+
 1. **Build Docker image**
 
    ```bash
    docker build -t human-calculator .
    ```
+
+   📋 **Copy & paste friendly:** `docker build -t human-calculator .`
 
 2. **Run Docker container**
 
@@ -102,15 +154,32 @@ See the section about [deployment](https://facebook.github.io/create-react-app/d
    docker run -p 7842:7842 human-calculator
    ```
 
+   📋 **Copy & paste friendly:** `docker run -p 7842:7842 human-calculator`
+
 3. **Open the app**
 
-   Go to: [http://localhost:7842](http://localhost:7842)
+   🌐 **Click to open:** [http://localhost:7842](http://localhost:7842)
 
-> 💡 **Detached Mode**
+> 💡 **Detached Mode (runs in background)**
+>
+> ```bash
+> docker run -d -p 7842:7842 --name my-human-calculator-app human-calculator
+> ```
+>
+> 📋 **Copy & paste friendly:** `docker run -d -p 7842:7842 --name my-human-calculator-app human-calculator`
 
-```bash
-docker run -d -p 7842:7842 --name my-human-calculator-app human-calculator
-```
+### ⚡ GitHub Actions (One-Click from GitHub)
+
+If you're viewing this on GitHub, you can build and test the Docker image directly from the **Actions** tab:
+
+1. Go to the **Actions** tab in the GitHub repository
+2. Click on **🐳 Docker Build & Test** workflow
+3. Click **Run workflow** button
+4. Choose your action and click **Run workflow**
+
+This will build and test the Docker image in GitHub's cloud environment!
+>
+> 📋 **Copy & paste friendly:** `docker run -d -p 7842:7842 --name my-human-calculator-app human-calculator`
 
 ### `npm run eject`
 

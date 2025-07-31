@@ -1,0 +1,46 @@
+name: 🐳 Docker Build & Test
+
+on:
+  workflow_dispatch: # Allows manual triggering from GitHub UI
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        default: 'build-and-test'
+        type: choice
+        options:
+          - build-and-test
+          - build-only
+          - test-only
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔨 Build Docker image
+        run: |
+          echo "🔨 Building Human Calculator Docker image..."
+          docker build -t human-calculator .
+
+      - name: 🧪 Test Docker container
+        if: github.event.inputs.action != 'build-only'
+        run: |
+          echo "🧪 Testing Docker container..."
+          docker run -d -p 7842:7842 --name test-container human-calculator
+          sleep 10
+          curl -f http://localhost:7842 || exit 1
+          docker stop test-container
+          docker rm test-container
+
+      - name: ✅ Success
+        run: |
+          echo "✅ Docker build and test completed successfully!"
+          echo "🌐 The Human Calculator is ready to deploy!"
