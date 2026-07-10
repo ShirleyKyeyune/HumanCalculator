@@ -116,6 +116,7 @@ export default function MobileMoneyCalculator({ onClose }) {
     <section
       id="mobile-money-calculator"
       className="mobile-money-panel"
+      data-network={network}
       aria-labelledby="mobile-money-heading"
     >
       <div className="mobile-money-header">

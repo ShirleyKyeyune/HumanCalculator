@@ -968,6 +968,11 @@ body {
 
 /* Mobile money calculator */
 .mobile-money-panel {
+  --mobile-money-accent: #d71920;
+  --mobile-money-accent-strong: #b71218;
+  --mobile-money-accent-soft: #fff0f1;
+  --mobile-money-accent-shadow: rgba(215, 25, 32, 0.22);
+  --mobile-money-button-text: white;
   grid-column: 1 / -1;
   display: flex;
   flex-direction: column;
@@ -979,6 +984,14 @@ body {
     0 10px 10px -5px rgba(0, 0, 0, 0.04);
   padding: 1.5rem;
   scroll-margin-top: 1rem;
+}
+
+.mobile-money-panel[data-network="mtn"] {
+  --mobile-money-accent: #ffcc00;
+  --mobile-money-accent-strong: #e3b600;
+  --mobile-money-accent-soft: #fff7cc;
+  --mobile-money-accent-shadow: rgba(255, 204, 0, 0.28);
+  --mobile-money-button-text: #1a202c;
 }
 
 .dark .mobile-money-panel {
@@ -1000,7 +1013,7 @@ body {
 
 .mobile-money-kicker {
   margin: 0 0 0.35rem;
-  color: #6b46c1;
+  color: var(--mobile-money-accent);
   font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0;
@@ -1008,7 +1021,7 @@ body {
 }
 
 .dark .mobile-money-kicker {
-  color: #d6bcfa;
+  color: var(--mobile-money-accent);
 }
 
 .mobile-money-header h2 {
@@ -1047,7 +1060,7 @@ body {
 
 .mobile-money-close:hover {
   background-color: #f8fafc;
-  border-color: #9f7aea;
+  border-color: var(--mobile-money-accent);
 }
 
 .dark .mobile-money-close {
@@ -1058,7 +1071,7 @@ body {
 
 .dark .mobile-money-close:hover {
   background-color: #2d3748;
-  border-color: #d6bcfa;
+  border-color: var(--mobile-money-accent);
 }
 
 .mobile-money-grid {
@@ -1123,8 +1136,8 @@ body {
 }
 
 .mobile-money-network.active {
-  border-color: #9f7aea;
-  box-shadow: 0 0 0 3px rgba(159, 122, 234, 0.25);
+  border-color: var(--mobile-money-accent);
+  box-shadow: 0 0 0 3px var(--mobile-money-accent-shadow);
 }
 
 .dark .mobile-money-network {
@@ -1134,8 +1147,8 @@ body {
 }
 
 .dark .mobile-money-network.active {
-  border-color: #d6bcfa;
-  box-shadow: 0 0 0 3px rgba(214, 188, 250, 0.18);
+  border-color: var(--mobile-money-accent);
+  box-shadow: 0 0 0 3px var(--mobile-money-accent-shadow);
 }
 
 .mobile-money-network small {
@@ -1177,8 +1190,8 @@ body {
 
 .mobile-money-cash-input:focus {
   outline: none;
-  border-color: #9f7aea;
-  box-shadow: 0 0 0 3px rgba(159, 122, 234, 0.25);
+  border-color: var(--mobile-money-accent);
+  box-shadow: 0 0 0 3px var(--mobile-money-accent-shadow);
 }
 
 .dark .mobile-money-cash-input {
@@ -1216,7 +1229,7 @@ body {
 .mobile-money-toggle input {
   width: 1rem;
   height: 1rem;
-  accent-color: #6b46c1;
+  accent-color: var(--mobile-money-accent);
 }
 
 .mobile-money-warning {
@@ -1238,7 +1251,7 @@ body {
   margin-top: 1rem;
   border: 1px solid #e2e8f0;
   border-radius: 0.5rem;
-  background-color: #f3edff;
+  background-color: var(--mobile-money-accent-soft);
   color: #4a5568;
   font-size: 0.8rem;
   line-height: 1.5;
@@ -1246,9 +1259,9 @@ body {
 }
 
 .dark .mobile-money-source-note {
-  background-color: #322659;
+  background-color: rgba(255, 255, 255, 0.06);
   border-color: #4a5568;
-  color: #d6bcfa;
+  color: #a0aec0;
 }
 
 .mobile-money-source-note strong {
@@ -1260,24 +1273,24 @@ body {
 }
 
 .mobile-money-source-note a {
-  color: #6b46c1;
+  color: var(--mobile-money-accent-strong);
   font-weight: 700;
 }
 
 .dark .mobile-money-source-note a {
-  color: #d6bcfa;
+  color: var(--mobile-money-accent);
 }
 
 .mobile-money-primary-result {
-  border-left: 5px solid #6b46c1;
+  border-left: 5px solid var(--mobile-money-accent);
   border-radius: 0.5rem;
-  background-color: #f3edff;
+  background-color: var(--mobile-money-accent-soft);
   padding: 1rem;
   margin-bottom: 0.75rem;
 }
 
 .dark .mobile-money-primary-result {
-  background-color: #322659;
+  background-color: rgba(255, 255, 255, 0.06);
 }
 
 .mobile-money-primary-result span {
@@ -1287,7 +1300,7 @@ body {
 }
 
 .dark .mobile-money-primary-result span {
-  color: #d6bcfa;
+  color: #a0aec0;
 }
 
 .mobile-money-primary-result strong {
@@ -1342,8 +1355,8 @@ body {
   width: 100%;
   border: 0;
   border-radius: 0.5rem;
-  background-color: #6b46c1;
-  color: white;
+  background-color: var(--mobile-money-accent);
+  color: var(--mobile-money-button-text);
   cursor: pointer;
   font-weight: 800;
   margin-top: 1rem;
@@ -1354,16 +1367,16 @@ body {
 }
 
 .mobile-money-copy:hover {
-  background-color: #805ad5;
+  background-color: var(--mobile-money-accent-strong);
   transform: translateY(-1px);
 }
 
 .dark .mobile-money-copy {
-  background-color: #553c9a;
+  background-color: var(--mobile-money-accent);
 }
 
 .dark .mobile-money-copy:hover {
-  background-color: #6b46c1;
+  background-color: var(--mobile-money-accent-strong);
 }
 
 .mobile-money-tariffs summary {
