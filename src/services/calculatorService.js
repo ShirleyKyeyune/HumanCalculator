@@ -151,6 +151,15 @@ export const sanitizeExpressionRaw = (raw) => {
   let expr = raw.replace(/,/g, '').trim();
   console.log(`After trimming: "${expr}"`);
 
+  try {
+    const complexResult = processComplexExpression(expr);
+    if (complexResult !== expr && /^-?\d+(?:\.\d+)?$/.test(complexResult)) {
+      console.log(`Human expression processed successfully: ${complexResult}`);
+      return complexResult;
+    }
+  } catch (error) {
+    console.error('Error processing human expression:', error);
+  }
 
   // Try to use the complex expression handler for expressions with parentheses and operators
   if (expr.includes('(') && expr.includes(')') &&

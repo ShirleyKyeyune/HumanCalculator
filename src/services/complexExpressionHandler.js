@@ -1,229 +1,257 @@
 /**
  * Complex Expression Handler
  *
- * This module handles complex expressions with multiple operations
- * following BODMAS (Brackets, Orders, Division, Multiplication, Addition, Subtraction) rules
+ * Normalizes human-written calculations into a compact math expression and
+ * evaluates it with standard operator precedence. Additive percentages use the
+ * current subtotal: "250K - 20%" => 250000 - (250000 * 0.2).
  */
 
-/**
- * Process a complex expression with multiple operations
- * @param {string} expression - The complex expression to process
- * @returns {string} - The result of the calculation
- */
-const processComplexExpression = (expression) => {
-  // Trim any spaces at the beginning and end of the expression
+const NUMBER_PATTERN = String.raw`\d+(?:\.\d+)?`;
+const SUFFIX_PATTERN = String.raw`[km]?`;
+const VALUE_PATTERN = String.raw`${NUMBER_PATTERN}\s*${SUFFIX_PATTERN}`;
+
+const toNumber = (value, suffix = '') => {
+  const multiplier = suffix.toLowerCase() === 'k'
+    ? 1000
+    : suffix.toLowerCase() === 'm'
+      ? 1000000
+      : 1;
+
+  return parseFloat(value) * multiplier;
+};
+
+const shouldUseComplexHandler = (expression) => {
+  if (!expression) return false;
+
+  const expr = expression.toLowerCase();
+  return /[()+\-*/×x÷%]/.test(expr) ||
+    /\b(plus|minus|split|between|discount|tax|vat|service charge|delivery|at|each|per|costing|with)\b/.test(expr) ||
+    /\d+(?:\.\d+)?\s*[km]\b/i.test(expr);
+};
+
+const replaceNaturalFuelExpression = (expr) => {
+  const fuelRegex = new RegExp(
+    String.raw`(${VALUE_PATTERN})\s*km\s*(?:at|\/|÷)\s*(${VALUE_PATTERN})\s*km\s*(?:per|\/)\s*lit(?:re|er)?s?(?:\s*,?\s*with\s*fuel\s*costing)?\s*(${VALUE_PATTERN})\s*(?:per\s*lit(?:re|er)?|\/\s*lit(?:re|er)?)?`,
+    'gi'
+  );
+
+  return expr.replace(fuelRegex, (_match, distance, efficiency, price) => {
+    return `((${distance})/(${efficiency}))*(${price})`;
+  });
+};
+
+const replaceAtEachExpressions = (expr) => {
+  const atEachRegex = new RegExp(
+    String.raw`\b(${VALUE_PATTERN})\s+[a-z][a-z\s/]*?\s+(?:at|@)\s+(${VALUE_PATTERN})(?:\s+(?:each|per\s+[a-z][a-z\s/]*))?`,
+    'gi'
+  );
+
+  return expr.replace(atEachRegex, '($1*$2)');
+};
+
+const replaceSplitExpressions = (expr) => {
+  const splitRegex = /\bsplit\s+(.+?)\s+(?:between|among|across|by)\s+(\d+(?:\.\d+)?)\s+(?:people|persons|team members|partners|remaining people|members)?\b/i;
+  const splitMatch = expr.match(splitRegex);
+
+  if (!splitMatch) return expr;
+
+  const [, billText, people] = splitMatch;
+  const billExpression = billText
+    .replace(/\band\b/gi, '+')
+    .replace(/,/g, '+')
+    .replace(/\bplus\b/gi, '+')
+    .replace(/\bminus\b/gi, '-');
+
+  return expr.replace(splitRegex, `((${billExpression})/${people})`);
+};
+
+const normalizeHumanExpression = (expression) => {
+  let expr = expression.replace(/,/g, '').trim();
+
+  expr = replaceNaturalFuelExpression(expr);
+  expr = replaceSplitExpressions(expr);
+  expr = replaceAtEachExpressions(expr);
+
+  if (/\bhours?\b/i.test(expr)) {
+    expr = expr.replace(/\b(\d+(?:\.\d+)?)\s*minutes?\b/gi, '($1/60)');
+  }
+
+  expr = expr
+    .replace(/\bkm\s*\/\s*lit(?:re|er)s?\b/gi, ' ')
+    .replace(/\bgb\s*\/\s*[a-z]+\b/gi, ' ')
+    .replace(/\btb\s*\/\s*[a-z]+\b/gi, ' ')
+    .replace(/×/g, '*')
+    .replace(/(^|[\d)\s])x(?=[\d(\s])/gi, '$1*')
+    .replace(/÷/g, '/')
+    .replace(/\bplus\b/gi, '+')
+    .replace(/\badd(?:ed)?\b/gi, '+')
+    .replace(/\bminus\b/gi, '-')
+    .replace(/\bless\b/gi, '-')
+    .replace(/\bwith\s+(?:a\s+)?(\d+(?:\.\d+)?)%\s+(?:off|discount)\b/gi, '- $1%')
+    .replace(/\b(?:off|discount)\b/gi, '')
+    .replace(/\b(?:vat|tax|service charge|annual discount|daily buffer|profit|savings|investment)\b/gi, '')
+    .replace(/\b(?:delivery|transport|fuel|parking|toll fees|refund|rent|food|bills|expenses|bonus|materials|labou?r|installation|accessories|setup fee|hosting|transaction fees|coupon|paid by [a-z]+|total|stock costs|selling price|cost|revenue|sales|income|break)\b/gi, '')
+    .replace(/\b(?:people|persons|partners|team members|members|remaining people|days?|working days?|months?|nights?|hours?|minutes?|projects?|meetings?|tasks?|users?|subscriptions?|products?|items?|units?|boxes?|bags?|bottles?|cakes?|shirts?|trousers?|shoes?|drinks?|pizzas?|meals?|juices?|burgers?|fries?|platters?|sodas?|trips?|taxi rides?|boda rides?|rooms?|bricks?|cement|sheets?|workers?|metres?|meters?|doors?|windows?|chairs?|phones?|litres?|liters?|km|gb|tb)\b/gi, '')
+    .replace(/\b(?:of|by|for|from|to|in|on|and|the|a|an|each|per|between|among|across|remaining|daily|monthly|annual|with|costing|price|charge|fees?)\b/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Adjacent money/quantity values separated only by spaces are usually list
+  // items after label words are stripped, e.g. "180K food 40K drinks".
+  expr = expr.replace(
+    new RegExp(String.raw`(${VALUE_PATTERN})\s+(?=${VALUE_PATTERN})`, 'gi'),
+    '$1 + '
+  );
+
+  return expr;
+};
+
+const tokenize = (expression) => {
+  const tokens = [];
+  const expr = expression.replace(/\s+/g, '');
+  let index = 0;
+
+  while (index < expr.length) {
+    const char = expr[index];
+
+    if ('+-*/()%'.includes(char)) {
+      tokens.push({ type: char, value: char });
+      index += 1;
+      continue;
+    }
+
+    const numberMatch = expr.slice(index).match(/^\d+(?:\.\d+)?([km])?/i);
+    if (numberMatch) {
+      const fullMatch = numberMatch[0];
+      const suffix = numberMatch[1] || '';
+      const number = fullMatch.replace(/[km]$/i, '');
+      tokens.push({ type: 'number', value: toNumber(number, suffix) });
+      index += fullMatch.length;
+      continue;
+    }
+
+    throw new Error(`Unexpected token "${char}" in "${expression}"`);
+  }
+
+  return tokens;
+};
+
+const createParser = (tokens) => {
+  let position = 0;
+
+  const peek = () => tokens[position];
+  const consume = (type) => {
+    const token = peek();
+    if (!token || token.type !== type) {
+      throw new Error(`Expected "${type}" but found "${token?.type || 'end'}"`);
+    }
+    position += 1;
+    return token;
+  };
+
+  const parseFactor = () => {
+    const token = peek();
+    if (!token) throw new Error('Unexpected end of expression');
+
+    if (token.type === '+') {
+      consume('+');
+      return parseFactor();
+    }
+
+    if (token.type === '-') {
+      consume('-');
+      const factor = parseFactor();
+      return { value: -factor.value, isPercent: factor.isPercent };
+    }
+
+    if (token.type === '(') {
+      consume('(');
+      const result = parseExpression();
+      consume(')');
+      return result;
+    }
+
+    if (token.type === 'number') {
+      consume('number');
+      if (peek()?.type === '%') {
+        consume('%');
+        return { value: token.value / 100, isPercent: true };
+      }
+      return { value: token.value, isPercent: false };
+    }
+
+    throw new Error(`Unexpected token "${token.type}"`);
+  };
+
+  const parseTerm = () => {
+    let left = parseFactor();
+
+    while (peek()?.type === '*' || peek()?.type === '/') {
+      const operator = consume(peek().type).type;
+      const right = parseFactor();
+
+      left = {
+        value: operator === '*' ? left.value * right.value : left.value / right.value,
+        isPercent: false
+      };
+    }
+
+    return left;
+  };
+
+  function parseExpression() {
+    let left = parseTerm();
+
+    while (peek()?.type === '+' || peek()?.type === '-') {
+      const operator = consume(peek().type).type;
+      const right = parseTerm();
+      const rightValue = right.isPercent ? left.value * right.value : right.value;
+
+      left = {
+        value: operator === '+' ? left.value + rightValue : left.value - rightValue,
+        isPercent: false
+      };
+    }
+
+    return left;
+  }
+
+  return {
+    parse: () => {
+      const result = parseExpression();
+      if (position < tokens.length) {
+        throw new Error(`Unexpected token "${tokens[position].type}"`);
+      }
+      return result.value;
+    }
+  };
+};
+
+export const processComplexExpression = (expression) => {
   const trimmedExpression = expression.trim();
-  console.log(`\n*** DEBUG: Processing complex expression: "${trimmedExpression}" ***`);
-  console.log(`Stack trace: ${new Error().stack}`);
-  console.log(`Expression type: ${typeof trimmedExpression}`);
-  console.log(`Expression length: ${trimmedExpression.length}`);
-  console.log(`Expression characters: ${Array.from(trimmedExpression).map(c => c.charCodeAt(0)).join(', ')}`);
-  console.log(`Contains parentheses: ${trimmedExpression.includes('(') && trimmedExpression.includes(')')}`);
-  console.log(`Contains plus: ${trimmedExpression.includes('+')}`);
-  console.log(`Contains minus: ${trimmedExpression.includes('-')}`);
-  console.log(`Contains k: ${trimmedExpression.includes('k')}`);
-  console.log(`Contains m: ${trimmedExpression.includes('m')}`);
 
-  console.log('Called from:', new Error().stack.split('\n')[2]);
+  if (!shouldUseComplexHandler(trimmedExpression)) {
+    return expression;
+  }
+
   try {
-    console.log('Analyzing expression structure...');
+    const normalizedExpression = normalizeHumanExpression(trimmedExpression);
+    const tokens = tokenize(normalizedExpression);
+    const result = createParser(tokens).parse();
 
-    // First, let's break down the expression into its component parts
-    // We'll identify each parenthesized expression and calculate its value
-
-    // This regex extracts each individual part with its calculation
-    const partRegex = /([a-zA-Z0-9]+(?:\s+[a-zA-Z0-9]+)*)\s+\((\d+(?:\.\d+)?)\s*[×x*@]\s*(\d+(?:\.\d+)?)\s*([km])?\)/g;
-
-    // This will hold all the parts and their calculated values
-    const parts = [];
-
-    // Extract and calculate each part
-    let match;
-
-    // First, process parenthesized expressions
-    while ((match = partRegex.exec(trimmedExpression)) !== null) {
-      const [fullMatch, label, firstNum, secondNum, suffix] = match;
-
-      // Process the numbers
-      let num1 = parseFloat(firstNum);
-      let num2 = parseFloat(secondNum);
-
-      // Apply multiplier if suffix is present
-      if (suffix) {
-        const multiplier = suffix.toLowerCase() === 'k' ? 1000 : 1000000;
-        num2 = num2 * multiplier;
-      }
-
-      // Calculate the result of this part
-      const result = num1 * num2;
-      console.log(`Calculated: ${label} (${firstNum}x${secondNum}${suffix || ''}) = ${result}`);
-
-      // Store the part and its value
-      parts.push({
-        text: fullMatch,
-        value: result
-      });
+    if (!Number.isFinite(result)) {
+      throw new Error('Expression produced a non-finite result');
     }
 
-    // Replace each parenthesized part with a placeholder in the trimmed expression
-    let modifiedExpr = trimmedExpression;
-    for (let i = 0; i < parts.length; i++) {
-      const placeholder = `__PART${i}__`;
-      modifiedExpr = modifiedExpr.replace(parts[i].text, placeholder);
-    }
-
-    console.log(`Modified expression: ${modifiedExpr}`);
-
-    // Process remaining text for standalone values
-    const processStandaloneValues = (remainingText) => {
-      if (!remainingText) return [];
-      
-      const standaloneTokens = [];
-      let processedText = remainingText;
-      
-      // Process in multiple passes to catch all standalone values
-      let madeChanges = true;
-      let passCount = 0;
-      const maxPasses = 5; // Limit to avoid infinite loops
-      
-      while (madeChanges && passCount < maxPasses) {
-        madeChanges = false;
-        passCount++;
-        
-        // 1. Process simple standalone values like '+1k' or '-2k'
-        const simpleRegex = /([+-])\s*(\d+(?:\.\d+)?)\s*([km])\b/g;
-        let simpleMatch;
-        
-        while ((simpleMatch = simpleRegex.exec(processedText)) !== null) {
-          const [fullMatch, operator, number, suffix] = simpleMatch;
-          
-          // Skip if already processed
-          if (fullMatch.includes('__PROCESSED__')) {
-            continue;
-          }
-          
-          // Process the number
-          let value = parseFloat(number);
-          const multiplier = suffix.toLowerCase() === 'k' ? 1000 : 1000000;
-          value = value * multiplier;
-          
-          console.log(`Found standalone value: ${operator} ${number}${suffix} = ${operator === '-' ? -value : value}`);
-          
-          // Add the operator and value
-          standaloneTokens.push({ type: 'operator', value: operator });
-          standaloneTokens.push({ type: 'part', value: value });
-          
-          // Mark as processed
-          processedText = processedText.replace(fullMatch, ` __PROCESSED__${passCount}__ `);
-          madeChanges = true;
-        }
-        
-        // 2. Process prefixed standalone values like '+ another 2k'
-        const prefixedRegex = /([+-])\s+([a-z][a-z\s]*)\s*(\d+(?:\.\d+)?)\s*([km])\b/gi;
-        let prefixedMatch;
-        
-        while ((prefixedMatch = prefixedRegex.exec(processedText)) !== null) {
-          const [fullMatch, operator, prefix, number, suffix] = prefixedMatch;
-          
-          // Skip if already processed
-          if (fullMatch.includes('__PROCESSED__')) {
-            continue;
-          }
-          
-          // Process the number
-          let value = parseFloat(number);
-          const multiplier = suffix.toLowerCase() === 'k' ? 1000 : 1000000;
-          value = value * multiplier;
-          
-          console.log(`Found prefixed standalone value: ${operator} ${prefix}${number}${suffix} = ${operator === '-' ? -value : value}`);
-          
-          // Add the operator and value
-          standaloneTokens.push({ type: 'operator', value: operator });
-          standaloneTokens.push({ type: 'part', value: value });
-          
-          // Mark as processed
-          processedText = processedText.replace(fullMatch, ` __PROCESSED__${passCount}__ `);
-          madeChanges = true;
-        }
-      }
-      
-      return standaloneTokens;
-    };
-
-    // Initialize tokens array with first part (if exists)
-    const tokens = [];
-    if (parts.length > 0) {
-      tokens.push({ type: 'part', value: parts[0].value });
-    }
-
-    // Process the modified expression to extract operators and parts
-    let remainingExpr = modifiedExpr;
-    
-    // Skip the first part as we've already added it
-    if (parts.length > 0) {
-      const firstPartPlaceholder = `__PART0__`;
-      const firstPartIndex = remainingExpr.indexOf(firstPartPlaceholder);
-      remainingExpr = remainingExpr.substring(firstPartIndex + firstPartPlaceholder.length);
-    }
-    
-    // Process remaining parts
-    for (let i = 1; i < parts.length; i++) {
-      const partPlaceholder = `__PART${i}__`;
-      const partIndex = remainingExpr.indexOf(partPlaceholder);
-      
-      if (partIndex >= 0) {
-        // Extract operator before this part
-        const beforeText = remainingExpr.substring(0, partIndex).trim();
-        const operator = beforeText.includes('+') ? '+' : '-';
-        tokens.push({ type: 'operator', value: operator });
-        tokens.push({ type: 'part', value: parts[i].value });
-        
-        // Remove processed part
-        remainingExpr = remainingExpr.substring(partIndex + partPlaceholder.length);
-      }
-    }
-
-    // Process any remaining text after the last part (might contain standalone values)
-    if (remainingExpr.trim()) {
-      console.log(`Processing remaining text: "${remainingExpr.trim()}"`);
-      
-      // Process standalone values in the remaining text
-      const standaloneTokens = processStandaloneValues(remainingExpr.trim());
-      tokens.push(...standaloneTokens);
-    }
-
-    console.log('Tokens:', tokens);
-
-    // Calculate the final result by applying operations in order
-    let result = 0;
-    let currentOp = '+';
-
-    for (const token of tokens) {
-      if (token.type === 'operator') {
-        currentOp = token.value;
-      } else if (token.type === 'part') {
-        if (currentOp === '+') {
-          result += token.value;
-          console.log(`After applying + ${token.value}: ${result}`);
-        } else {
-          result -= token.value;
-          console.log(`After applying - ${token.value}: ${result}`);
-        }
-      }
-    }
-
-    console.log(`Final result: ${result}`);
     return result.toString();
   } catch (error) {
     console.error(`Error processing complex expression: ${error.message}`);
-    return expression; // Return the original expression if there's an error
+    return expression;
   }
 };
 
-// Create a named export object to fix lint issue
 const complexExpressionHandler = {
   processComplexExpression
 };
 
-export { processComplexExpression };
 export default complexExpressionHandler;
