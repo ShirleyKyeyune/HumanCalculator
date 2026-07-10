@@ -69,8 +69,8 @@ export const sanitizeExpression = (expr) => {
   if (lowerExpr.includes('k') || lowerExpr.includes('m')) {
     // Check if this is a simple expression with standalone values
     const isSimpleExpression = !expr.includes('(') ||
-                              (expr.match(/\b\d+(?:\.\d+)?\s*[km]\b/gi) &&
-                               !expr.match(/\([^)]*\b\d+(?:\.\d+)?\s*[km]\b[^)]*\)/gi));
+      (expr.match(/\b\d+(?:\.\d+)?\s*[km]\b/gi) &&
+        !expr.match(/\([^)]*\b\d+(?:\.\d+)?\s*[km]\b[^)]*\)/gi));
 
     if (isSimpleExpression) {
       console.log('Processing simple expression with standalone values');
@@ -104,25 +104,25 @@ export const sanitizeExpression = (expr) => {
     });
 
 
-  // Handle k suffix in multiplication (e.g., "300 * 1.2k")
-  expr = expr.replace(/([\d.]+)\s*[*x×]\s*([\d.]+)\s*k\b/i, (match, num1, num2) => {
-    return `${num1} * ${parseFloat(num2) * 1000}`;
-  });
+    // Handle k suffix in multiplication (e.g., "300 * 1.2k")
+    expr = expr.replace(/([\d.]+)\s*[*x×]\s*([\d.]+)\s*k\b/i, (match, num1, num2) => {
+      return `${num1} * ${parseFloat(num2) * 1000}`;
+    });
 
     // Handle m suffix in multiplication (e.g., "300 * 1.2m")
-  expr = expr.replace(/([\d.]+)\s*[*x×]\s*([\d.]+)\s*m\b/i, (match, num1, num2) => {
-    return `${num1} * ${parseFloat(num2) * 1000000}`;
-  });
+    expr = expr.replace(/([\d.]+)\s*[*x×]\s*([\d.]+)\s*m\b/i, (match, num1, num2) => {
+      return `${num1} * ${parseFloat(num2) * 1000000}`;
+    });
 
-  // Handle k suffix before multiplication (e.g., "1.2k * 300")
-  expr = expr.replace(/([\d.]+)\s*k\b\s*[*x×]\s*([\d.]+)/i, (match, num1, num2) => {
-    return `${parseFloat(num1) * 1000} * ${num2}`;
-  });
+    // Handle k suffix before multiplication (e.g., "1.2k * 300")
+    expr = expr.replace(/([\d.]+)\s*k\b\s*[*x×]\s*([\d.]+)/i, (match, num1, num2) => {
+      return `${parseFloat(num1) * 1000} * ${num2}`;
+    });
 
-  // Handle m suffix before multiplication (e.g., "1.2m * 300")
-  expr = expr.replace(/([\d.]+)\s*m\b\s*[*x×]\s*([\d.]+)/i, (match, num1, num2) => {
-    return `${parseFloat(num1) * 1000000} * ${num2}`;
-  });
+    // Handle m suffix before multiplication (e.g., "1.2m * 300")
+    expr = expr.replace(/([\d.]+)\s*m\b\s*[*x×]\s*([\d.]+)/i, (match, num1, num2) => {
+      return `${parseFloat(num1) * 1000000} * ${num2}`;
+    });
   }
 
   // Then perform final sanitization for the parser
@@ -163,8 +163,8 @@ export const sanitizeExpressionRaw = (raw) => {
 
   // Try to use the complex expression handler for expressions with parentheses and operators
   if (expr.includes('(') && expr.includes(')') &&
-      (expr.includes('+') || expr.includes('-')) &&
-      (expr.includes('k') || expr.includes('m'))) {
+    (expr.includes('+') || expr.includes('-')) &&
+    /[km]/i.test(expr)) {
     console.log('Potential complex expression detected:', expr);
 
     try {
@@ -177,7 +177,7 @@ export const sanitizeExpressionRaw = (raw) => {
         // throughout the calculator service
         const resultStr = result.toString();
         console.log(`Result string: ${resultStr}`);
-        
+
         // If the result is a negative number, we need to handle it specially
         // to ensure it's preserved through the entire calculation process
         if (resultStr.startsWith('-')) {
@@ -635,7 +635,7 @@ export const evaluateExpression = (expr, scope = {}) => {
 
   try {
     console.log(`Evaluating expression: "${expr}"`);
-    
+
     // If the expression is already a number (as a string), we can directly parse it
     // This handles cases where complex expression handler returns a negative number
     if (/^-?\d+(\.\d+)?$/.test(expr)) {
@@ -643,11 +643,11 @@ export const evaluateExpression = (expr, scope = {}) => {
       console.log(`Direct parse of numeric string: ${parsedValue}`);
       return parsedValue;
     }
-    
+
     const sanitized = sanitizeExpression(expr);
     console.log(`After sanitization: "${sanitized}"`);
     if (!sanitized) return null;
-    
+
     // Check again if the sanitized expression is a simple number
     if (/^-?\d+(\.\d+)?$/.test(sanitized)) {
       const parsedValue = parseFloat(sanitized);
@@ -681,26 +681,26 @@ export const processInput = (input) => {
     try {
       // Remove trailing operators
       const stripped = line.replace(/[+\-*/]\s*$/, '');
-      
+
       // First, check if this is a complex expression with multiple parts
       // that should be processed as a whole
-      if (stripped.includes('(') && stripped.includes(')') && 
-          (stripped.includes('+') || stripped.includes('-')) && 
-          (stripped.includes('k') || stripped.includes('m'))) {
+      if (stripped.includes('(') && stripped.includes(')') &&
+        (stripped.includes('+') || stripped.includes('-')) &&
+        /[km]/i.test(stripped)) {
         console.log(`Processing complex multi-part expression: "${stripped}"`);
-        
+
         // Process the entire expression at once using the complex expression handler directly
         // This ensures we get the correct result without losing the negative sign
         const complexResult = processComplexExpression(stripped);
         console.log(`Direct complex expression result: ${complexResult}`);
-        
+
         // Convert the result to a number to ensure it's handled correctly
         const numericResult = parseFloat(complexResult);
         console.log(`Numeric result: ${numericResult}`);
-        
+
         // Skip the sanitizeExpression and evaluateExpression steps for complex expressions
         // as they can potentially lose the negative sign
-        
+
         return {
           expression: line,
           sanitized: stripped,
@@ -708,7 +708,7 @@ export const processInput = (input) => {
           value: numericResult
         };
       }
-      
+
       // Process function-like expressions (e.g., "tape(140*25)")
       let processedLine = stripped;
       const functionMatches = [...stripped.matchAll(/([a-zA-Z0-9_]+)\s*\(([^)]+)\)/g)];

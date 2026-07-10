@@ -1,0 +1,375 @@
+{
+  "conventions": {
+    "K": 1000,
+    "M": 1000000,
+    "percentage_rule": "A postfix +N% or -N% modifies the full running subtotal immediately to its left.",
+    "evaluation_order": "Parentheses first, then multiplication/division, then addition/subtraction; percentage modifiers are applied at their written position from left to right."
+  },
+  "tests": [
+    {
+      "id": 1,
+      "input": "(3 bottles x 3K) + 10K + (2 cakes x 20K)",
+      "expected": 59000,
+      "unit": "money"
+    },
+    {
+      "id": 2,
+      "input": "(4 shirts x 35K) + (2 trousers x 60K) - 20K discount",
+      "expected": 240000,
+      "unit": "money"
+    },
+    {
+      "id": 3,
+      "input": "((6 boxes x 12K) + 18K delivery) - 10% discount",
+      "expected": 81000,
+      "unit": "money"
+    },
+    {
+      "id": 4,
+      "input": "(2 bags of rice x 85K) + (5 litres of oil x 9K) + 15K transport",
+      "expected": 230000,
+      "unit": "money"
+    },
+    {
+      "id": 5,
+      "input": "((3 shoes x 120K) + 25K delivery) - 15%",
+      "expected": 327250,
+      "unit": "money"
+    },
+    {
+      "id": 6,
+      "input": "(8 drinks x 4K) + (3 pizzas x 25K) + 12K service charge",
+      "expected": 119000,
+      "unit": "money"
+    },
+    {
+      "id": 7,
+      "input": "250K - 20%",
+      "expected": 200000,
+      "unit": "money"
+    },
+    {
+      "id": 8,
+      "input": "(180K + 40K delivery) - 10%",
+      "expected": 198000,
+      "unit": "money"
+    },
+    {
+      "id": 9,
+      "input": "(3 items x 75K) - 15% discount + 10K delivery",
+      "expected": 201250,
+      "unit": "money"
+    },
+    {
+      "id": 10,
+      "input": "((2 phones x 850K) + 50K accessories) - 5%",
+      "expected": 1662500,
+      "unit": "money"
+    },
+    {
+      "id": 11,
+      "input": "500K - 12% tax - 25K expenses",
+      "expected": 415000,
+      "unit": "money"
+    },
+    {
+      "id": 12,
+      "input": "(120K x 4) + 18% VAT",
+      "expected": 566400,
+      "unit": "money"
+    },
+    {
+      "id": 13,
+      "input": "250K - (20% x 250K)",
+      "expected": 200000,
+      "unit": "money"
+    },
+    {
+      "id": 14,
+      "input": "((180K + 40K) - (10% x (180K + 40K)))",
+      "expected": 198000,
+      "unit": "money"
+    },
+    {
+      "id": 15,
+      "input": "(3 meals x 25K) + (4 drinks x 5K) + 10% service charge",
+      "expected": 104500,
+      "unit": "money"
+    },
+    {
+      "id": 16,
+      "input": "((2 pizzas x 32K) + (3 juices x 8K)) / 5 people",
+      "expected": 17600,
+      "unit": "money_per_person"
+    },
+    {
+      "id": 17,
+      "input": "(5 burgers x 18K) + (2 fries x 10K) + 15K delivery - 5% discount",
+      "expected": 118750,
+      "unit": "money"
+    },
+    {
+      "id": 18,
+      "input": "((4 meals x 30K) + 20K service charge) / 4",
+      "expected": 35000,
+      "unit": "money_per_person"
+    },
+    {
+      "id": 19,
+      "input": "(2 platters x 80K) + (6 sodas x 4K) + 18% VAT",
+      "expected": 217120,
+      "unit": "money"
+    },
+    {
+      "id": 20,
+      "input": "(5 trips x 12K) + 20K fuel + 8K parking",
+      "expected": 88000,
+      "unit": "money"
+    },
+    {
+      "id": 21,
+      "input": "(450 km / 15 km/litre) x 6K per litre",
+      "expected": 180000,
+      "unit": "money"
+    },
+    {
+      "id": 22,
+      "input": "((120 km / 12 km/litre) x 6.5K) + 15K toll fees",
+      "expected": 80000,
+      "unit": "money"
+    },
+    {
+      "id": 23,
+      "input": "(3 taxi rides x 18K) + (2 boda rides x 7K) - 10K refund",
+      "expected": 58000,
+      "unit": "money"
+    },
+    {
+      "id": 24,
+      "input": "(60K fuel + 25K parking + 15K washing) / 4 people",
+      "expected": 25000,
+      "unit": "money_per_person"
+    },
+    {
+      "id": 25,
+      "input": "2.5M - 450K rent - 300K food - 150K transport",
+      "expected": 1600000,
+      "unit": "money"
+    },
+    {
+      "id": 26,
+      "input": "3M - (10% savings) - 600K rent - 250K bills",
+      "expected": 1850000,
+      "unit": "money"
+    },
+    {
+      "id": 27,
+      "input": "(2.8M + 500K bonus) - 12% tax - 700K expenses",
+      "expected": 2204000,
+      "unit": "money"
+    },
+    {
+      "id": 28,
+      "input": "4.5M - (15% savings) - (8% investment) - 1.2M expenses",
+      "expected": 2319000,
+      "unit": "money"
+    },
+    {
+      "id": 29,
+      "input": "(120K daily income x 24 days) - 850K expenses",
+      "expected": 2030000,
+      "unit": "money"
+    },
+    {
+      "id": 30,
+      "input": "((80K x 20 working days) + 300K bonus) - 10% tax",
+      "expected": 1710000,
+      "unit": "money"
+    },
+    {
+      "id": 31,
+      "input": "(180K food + 40K drinks + 20K transport) / 4 people",
+      "expected": 60000,
+      "unit": "money_per_person"
+    },
+    {
+      "id": 32,
+      "input": "((3 rooms x 150K) + 60K food) / 6 people",
+      "expected": 85000,
+      "unit": "money_per_person"
+    },
+    {
+      "id": 33,
+      "input": "(500K total - 80K paid by John) / 3 remaining people",
+      "expected": 140000,
+      "unit": "money_per_person"
+    },
+    {
+      "id": 34,
+      "input": "((250K + 50K service charge) - 10% discount) / 5",
+      "expected": 54000,
+      "unit": "money_per_person"
+    },
+    {
+      "id": 35,
+      "input": "(2 nights x 300K + 120K meals + 60K fuel) / 4",
+      "expected": 195000,
+      "unit": "money_per_person"
+    },
+    {
+      "id": 36,
+      "input": "(50 bricks x 1.5K) + (4 bags of cement x 38K) + 80K labour",
+      "expected": 307000,
+      "unit": "money"
+    },
+    {
+      "id": 37,
+      "input": "((12 sheets x 45K) + 150K transport) - 5% discount",
+      "expected": 655500,
+      "unit": "money"
+    },
+    {
+      "id": 38,
+      "input": "(8 workers x 35K per day x 5 days) + 400K materials",
+      "expected": 1800000,
+      "unit": "money"
+    },
+    {
+      "id": 39,
+      "input": "((20 metres x 18K) + 250K labour) + 18% VAT",
+      "expected": 719800,
+      "unit": "money"
+    },
+    {
+      "id": 40,
+      "input": "(6 doors x 250K) + (10 windows x 120K) + 500K installation",
+      "expected": 3200000,
+      "unit": "money"
+    },
+    {
+      "id": 41,
+      "input": "(50 items x 25K selling price) - (50 items x 15K cost)",
+      "expected": 500000,
+      "unit": "money"
+    },
+    {
+      "id": 42,
+      "input": "((120 units x 8K) - 350K expenses) / 3 partners",
+      "expected": 203333.33333333334,
+      "expected_exact": "610000/3",
+      "unit": "money_per_partner",
+      "comparison": "use_tolerance"
+    },
+    {
+      "id": 43,
+      "input": "(2.4M sales - 1.1M stock costs - 300K rent) - 10% tax",
+      "expected": 900000,
+      "unit": "money"
+    },
+    {
+      "id": 44,
+      "input": "(75 products x 40K) - (75 products x 28K) - 250K delivery",
+      "expected": 650000,
+      "unit": "money"
+    },
+    {
+      "id": 45,
+      "input": "((5M revenue - 2M expenses) x 30%) + 200K bonus",
+      "expected": 1100000,
+      "unit": "money"
+    },
+    {
+      "id": 46,
+      "input": "(1.5M investment + 20% profit) - 100K transaction fees",
+      "expected": 1700000,
+      "unit": "money"
+    },
+    {
+      "id": 47,
+      "input": "(3 months x 120K) + 25K setup fee - 10% discount",
+      "expected": 346500,
+      "unit": "money"
+    },
+    {
+      "id": 48,
+      "input": "(15 users x 30K per month x 12 months) - 15% annual discount",
+      "expected": 4590000,
+      "unit": "money"
+    },
+    {
+      "id": 49,
+      "input": "((4 subscriptions x 50K) + 80K hosting) / 5 team members",
+      "expected": 56000,
+      "unit": "money_per_member"
+    },
+    {
+      "id": 50,
+      "input": "(2TB storage x 35K) + (500GB extra x 20K) + 18% tax",
+      "expected": 11882600,
+      "unit": "money"
+    },
+    {
+      "id": 51,
+      "input": "(8 hours x 5 days) - (45 minutes break x 5 days)",
+      "expected": 36.25,
+      "expected_seconds": 130500,
+      "unit": "hours"
+    },
+    {
+      "id": 52,
+      "input": "(120 tasks / 6 days) + 10% daily buffer",
+      "expected": 22,
+      "unit": "tasks_per_day"
+    },
+    {
+      "id": 53,
+      "input": "((3 hours x 4 projects) + 5 hours meetings) / 5 days",
+      "expected": 3.4,
+      "expected_seconds": 12240,
+      "unit": "hours_per_day"
+    },
+    {
+      "id": 54,
+      "input": "(40 hours - 8 hours meetings - 6 hours support) / 5 days",
+      "expected": 5.2,
+      "expected_seconds": 18720,
+      "unit": "hours_per_day"
+    },
+    {
+      "id": 55,
+      "input": "3 bottles at 3K each + 10K delivery + 2 cakes at 20K each",
+      "expected": 59000,
+      "unit": "money"
+    },
+    {
+      "id": 56,
+      "input": "4 shirts at 35K each, plus 2 trousers at 60K each, minus 20K",
+      "expected": 240000,
+      "unit": "money"
+    },
+    {
+      "id": 57,
+      "input": "250K with a 20% discount, plus 15K delivery",
+      "expected": 215000,
+      "unit": "money"
+    },
+    {
+      "id": 58,
+      "input": "450 km at 15 km per litre, with fuel costing 6K per litre",
+      "expected": 180000,
+      "unit": "money"
+    },
+    {
+      "id": 59,
+      "input": "Split 300K food, 50K drinks, and 20K transport between 5 people",
+      "expected": 74000,
+      "unit": "money_per_person"
+    },
+    {
+      "id": 60,
+      "input": "((5 chairs x 80K) + 50K delivery - 20K coupon) - 10%",
+      "expected": 387000,
+      "unit": "money"
+    }
+  ]
+}

@@ -47,11 +47,11 @@ export const mSuffixMultiplyPattern = /(\d+(?:,\d+)?)\s*[×x*]\s*(\d+(?:\.\d+)?)
 export const kSuffixBeforeMultiplyPattern = /(\d+(?:\.\d+)?)\s*k\b\s*[×x*]\s*(\d+(?:,\d+)?)/i;
 export const mSuffixBeforeMultiplyPattern = /(\d+(?:\.\d+)?)\s*m\b\s*[×x*]\s*(\d+(?:,\d+)?)/i;
 
-// Pattern for "300 bottles @ 1.2K" format
-export const bottlesAtKPattern = /(\d+(?:,\d+)?)\s*(?:bottles|bottle)\s*@\s*(\d+\.\d+)\s*([km])\b/gi;
+// Pattern for "300 bottles @ 1.2K" format (optional currency, e.g. "@ UGX 1.2K")
+export const bottlesAtKPattern = /(\d+(?:,\d+)?)\s*(?:bottles|bottle)\s*@\s*(?:UGX\s*)?(\d+\.\d+)\s*([km])\b/gi;
 
-// Pattern for "300 bottles @ 1,200" format
-export const bottlesAtNumPattern = /(\d+(?:,\d+)?)\s*(?:bottles|bottle)\s*@\s*(\d+(?:,\d+)?)/gi;
+// Pattern for "300 bottles @ 1,200" format (optional currency, e.g. "@ UGX 1,200")
+export const bottlesAtNumPattern = /(\d+(?:,\d+)?)\s*(?:bottles|bottle)\s*@\s*(?:UGX\s*)?(\d+(?:,\d+)?)/gi;
 
 // Pattern for "300 people × 1,200 bottles each" format
 export const peopleBottlesPattern = /(\d+(?:,\d+)?)\s*(?:people|person)?\s*[×x]\s*(\d+(?:,\d+)?)\s*(?:bottles|bottle|UGX)?/gi;

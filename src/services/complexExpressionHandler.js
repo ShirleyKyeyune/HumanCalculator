@@ -93,6 +93,16 @@ const normalizeHumanExpression = (expression) => {
     .replace(/\b(?:delivery|transport|fuel|parking|toll fees|refund|rent|food|bills|expenses|bonus|materials|labou?r|installation|accessories|setup fee|hosting|transaction fees|coupon|paid by [a-z]+|total|stock costs|selling price|cost|revenue|sales|income|break)\b/gi, '')
     .replace(/\b(?:people|persons|partners|team members|members|remaining people|days?|working days?|months?|nights?|hours?|minutes?|projects?|meetings?|tasks?|users?|subscriptions?|products?|items?|units?|boxes?|bags?|bottles?|cakes?|shirts?|trousers?|shoes?|drinks?|pizzas?|meals?|juices?|burgers?|fries?|platters?|sodas?|trips?|taxi rides?|boda rides?|rooms?|bricks?|cement|sheets?|workers?|metres?|meters?|doors?|windows?|chairs?|phones?|litres?|liters?|km|gb|tb)\b/gi, '')
     .replace(/\b(?:of|by|for|from|to|in|on|and|the|a|an|each|per|between|among|across|remaining|daily|monthly|annual|with|costing|price|charge|fees?)\b/gi, ' ')
+    // Generic cleanup: strip any remaining label words (unknown nouns such as
+    // "rice", "washing", or unit letters like "TB"/"GB") while preserving the
+    // k/m suffix that directly follows a number (e.g. "85K", "1.2m").
+    .replace(/([0-9]?)([a-z]+)/gi, (_match, digit, word) => {
+      const lower = word.toLowerCase();
+      if (digit && (lower === 'k' || lower === 'm')) {
+        return `${digit}${lower}`;
+      }
+      return digit ? `${digit} ` : ' ';
+    })
     .replace(/\s+/g, ' ')
     .trim();
 
