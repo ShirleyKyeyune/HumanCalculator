@@ -1,7 +1,7 @@
 import './App.css';
 import { useState, useEffect } from 'react';
 import HumanWebCalculator from './HumanWebCalculator';
-import { SunIcon, MoonIcon, ShareIcon, HistoryIcon } from './icons/Icons';
+import { SunIcon, MoonIcon, ShareIcon, HistoryIcon, WalletIcon } from './icons/Icons';
 import pkg from '../package.json';
 const calculatorIcon = process.env.PUBLIC_URL + '/favicon.svg';
 
@@ -9,6 +9,7 @@ function App() {
   const [workbookName, setWorkbookName] = useState('My Workbook');
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showMobileMoney, setShowMobileMoney] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
 
   // Toggle document class for dark mode
@@ -68,6 +69,19 @@ function App() {
               <HistoryIcon className="button-icon" /> History
             </button>
             <button
+              className="workbook-button"
+              id="mobile-money-button"
+              onClick={() => {
+                setShowMobileMoney(true);
+                window.setTimeout(() => {
+                  document.getElementById('mobile-money-calculator')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 0);
+              }}
+              title="Open mobile money charges calculator"
+            >
+              <WalletIcon className="button-icon" /> Mobile Money
+            </button>
+            <button
               onClick={() => setDarkMode(!darkMode)}
               className="workbook-button dark-mode-button"
               aria-label="Toggle dark mode"
@@ -88,6 +102,8 @@ function App() {
           setShowSaveDialog={setShowSaveDialog}
           showImportDialog={showImportDialog}
           setShowImportDialog={setShowImportDialog}
+          showMobileMoney={showMobileMoney}
+          onCloseMobileMoney={() => setShowMobileMoney(false)}
           darkMode={darkMode}
         />
       </main>

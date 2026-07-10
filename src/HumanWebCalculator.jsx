@@ -7,6 +7,7 @@ import { jsPDF } from "jspdf";
 import * as XLSX from "xlsx";
 import HistoryPanel from "./components/HistoryPanel";
 import QRCodeDisplay from "./components/QRCodeDisplay";
+import MobileMoneyCalculator from "./components/MobileMoneyCalculator";
 import { QRCodeIcon } from "./icons/Icons";
 import useWorkbookManager from "./hooks/useWorkbookManager";
 
@@ -55,7 +56,9 @@ export default function HumanWebCalculator({
   showSaveDialog,
   setShowSaveDialog,
   showImportDialog,
-  setShowImportDialog}) {
+  setShowImportDialog,
+  showMobileMoney,
+  onCloseMobileMoney}) {
   const seedLines = [
     "bottles 1.2k x 300 people",
     "Quantity: 300 × 1.2k bottles",
@@ -555,6 +558,10 @@ export default function HumanWebCalculator({
           </div>
         </div>
       </div>
+
+      {showMobileMoney && (
+        <MobileMoneyCalculator onClose={onCloseMobileMoney} />
+      )}
 
       {/* Save Dialog */}
       {showSaveDialog && (

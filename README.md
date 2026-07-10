@@ -52,6 +52,7 @@ This easy-to-use web calculator lets you mix regular text with math problems in 
   - Load a calculation from history back into the main editor.
   - Delete entries from history.
 - **📱 QR Code Generation:** Generate a QR code for the current selection or the entire workbook (including the total) for easy sharing or transfer.
+- **💸 Uganda Mobile Money Calculator:** Estimate Airtel Money and MTN MoMo wallet amounts, withdrawal fees, sender transfer fees, and the separate 0.5% withdrawal tax for exact cash withdrawals, with provider-specific tariff datasets and official source links.
 
 **🛠️ Development & Setup:**
 

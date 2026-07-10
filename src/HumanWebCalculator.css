@@ -1,5 +1,6 @@
 /* HumanWebCalculator.css */
-html, body {
+html,
+body {
   overflow-x: hidden;
   max-width: 100%;
 }
@@ -123,7 +124,9 @@ html, body {
   flex-direction: column;
   background-color: white;
   border-radius: 1rem;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
   padding: 1.5rem;
   transition: background-color 0.3s;
   min-height: fit-content;
@@ -465,7 +468,9 @@ html, body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 
 .dark .history-item {
@@ -959,4 +964,469 @@ html, body {
 
 .file-input {
   display: none;
+}
+
+/* Mobile money calculator */
+.mobile-money-panel {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background-color: white;
+  border-radius: 1rem;
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  padding: 1.5rem;
+  scroll-margin-top: 1rem;
+}
+
+.dark .mobile-money-panel {
+  background-color: #2d3748;
+}
+
+.mobile-money-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 1rem;
+}
+
+.dark .mobile-money-header {
+  border-bottom-color: #4a5568;
+}
+
+.mobile-money-kicker {
+  margin: 0 0 0.35rem;
+  color: #6b46c1;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.dark .mobile-money-kicker {
+  color: #d6bcfa;
+}
+
+.mobile-money-header h2 {
+  margin: 0;
+  color: #1a202c;
+  font-size: 1.5rem;
+}
+
+.dark .mobile-money-header h2 {
+  color: #f7fafc;
+}
+
+.mobile-money-header p {
+  margin: 0.4rem 0 0;
+  color: #4a5568;
+  line-height: 1.5;
+}
+
+.dark .mobile-money-header p {
+  color: #a0aec0;
+}
+
+.mobile-money-close {
+  flex: 0 0 auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  background-color: white;
+  color: #4a5568;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0.5rem 0.75rem;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
+}
+
+.mobile-money-close:hover {
+  background-color: #f8fafc;
+  border-color: #9f7aea;
+}
+
+.dark .mobile-money-close {
+  background-color: #1a202c;
+  border-color: #4a5568;
+  color: #f7fafc;
+}
+
+.dark .mobile-money-close:hover {
+  background-color: #2d3748;
+  border-color: #d6bcfa;
+}
+
+.mobile-money-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: 1rem;
+}
+
+.mobile-money-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  background-color: #f8fafc;
+  padding: 1rem;
+}
+
+.dark .mobile-money-card {
+  background-color: #1a202c;
+  border-color: #4a5568;
+}
+
+.mobile-money-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #1a202c;
+  font-weight: 700;
+}
+
+.dark .mobile-money-label {
+  color: #f7fafc;
+}
+
+.mobile-money-network-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.mobile-money-network {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0 0.45rem;
+  min-height: 68px;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  background-color: white;
+  color: #1a202c;
+  cursor: pointer;
+  font-weight: 800;
+  padding: 0.75rem;
+  text-align: left;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    transform 0.2s;
+}
+
+.mobile-money-network:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+}
+
+.mobile-money-network.active {
+  border-color: #9f7aea;
+  box-shadow: 0 0 0 3px rgba(159, 122, 234, 0.25);
+}
+
+.dark .mobile-money-network {
+  background-color: #2d3748;
+  border-color: #4a5568;
+  color: #f7fafc;
+}
+
+.dark .mobile-money-network.active {
+  border-color: #d6bcfa;
+  box-shadow: 0 0 0 3px rgba(214, 188, 250, 0.18);
+}
+
+.mobile-money-network small {
+  grid-column: 2;
+  color: #718096;
+  font-weight: 500;
+}
+
+.dark .mobile-money-network small {
+  color: #a0aec0;
+}
+
+.mobile-money-brand-dot {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+}
+
+.mobile-money-network[data-network="airtel"] .mobile-money-brand-dot {
+  background-color: #d71920;
+}
+
+.mobile-money-network[data-network="mtn"] .mobile-money-brand-dot {
+  background-color: #ffcc00;
+  border: 1px solid #1a202c;
+}
+
+.mobile-money-cash-input {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  background-color: white;
+  color: #1a202c;
+  font-size: 1.5rem;
+  font-weight: 800;
+  padding: 0.75rem;
+}
+
+.mobile-money-cash-input:focus {
+  outline: none;
+  border-color: #9f7aea;
+  box-shadow: 0 0 0 3px rgba(159, 122, 234, 0.25);
+}
+
+.dark .mobile-money-cash-input {
+  background-color: #2d3748;
+  border-color: #4a5568;
+  color: #f7fafc;
+}
+
+.mobile-money-hint,
+.mobile-money-footnote {
+  color: #718096;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin: 0.5rem 0 0;
+}
+
+.dark .mobile-money-hint,
+.dark .mobile-money-footnote {
+  color: #a0aec0;
+}
+
+.mobile-money-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 1rem;
+  color: #1a202c;
+  font-weight: 600;
+}
+
+.dark .mobile-money-toggle {
+  color: #f7fafc;
+}
+
+.mobile-money-toggle input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #6b46c1;
+}
+
+.mobile-money-warning {
+  margin-top: 1rem;
+  border-radius: 0.5rem;
+  background-color: #fffaf0;
+  color: #975a16;
+  padding: 0.75rem;
+}
+
+.dark .mobile-money-warning {
+  background-color: #443008;
+  color: #fbd38d;
+}
+
+.mobile-money-source-note {
+  display: grid;
+  gap: 0.25rem;
+  margin-top: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  background-color: #f3edff;
+  color: #4a5568;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  padding: 0.75rem;
+}
+
+.dark .mobile-money-source-note {
+  background-color: #322659;
+  border-color: #4a5568;
+  color: #d6bcfa;
+}
+
+.mobile-money-source-note strong {
+  color: #1a202c;
+}
+
+.dark .mobile-money-source-note strong {
+  color: #f7fafc;
+}
+
+.mobile-money-source-note a {
+  color: #6b46c1;
+  font-weight: 700;
+}
+
+.dark .mobile-money-source-note a {
+  color: #d6bcfa;
+}
+
+.mobile-money-primary-result {
+  border-left: 5px solid #6b46c1;
+  border-radius: 0.5rem;
+  background-color: #f3edff;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.dark .mobile-money-primary-result {
+  background-color: #322659;
+}
+
+.mobile-money-primary-result span {
+  display: block;
+  color: #4a5568;
+  font-size: 0.875rem;
+}
+
+.dark .mobile-money-primary-result span {
+  color: #d6bcfa;
+}
+
+.mobile-money-primary-result strong {
+  display: block;
+  margin-top: 0.25rem;
+  color: #1a202c;
+  font-size: 1.8rem;
+}
+
+.dark .mobile-money-primary-result strong {
+  color: #f7fafc;
+}
+
+.mobile-money-rows {
+  display: grid;
+}
+
+.mobile-money-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 0.7rem 0;
+}
+
+.mobile-money-row:last-child {
+  border-bottom: 0;
+}
+
+.dark .mobile-money-row {
+  border-bottom-color: #4a5568;
+}
+
+.mobile-money-row span {
+  color: #4a5568;
+}
+
+.dark .mobile-money-row span {
+  color: #a0aec0;
+}
+
+.mobile-money-row strong {
+  color: #1a202c;
+  text-align: right;
+}
+
+.dark .mobile-money-row strong {
+  color: #f7fafc;
+}
+
+.mobile-money-copy {
+  width: 100%;
+  border: 0;
+  border-radius: 0.5rem;
+  background-color: #6b46c1;
+  color: white;
+  cursor: pointer;
+  font-weight: 800;
+  margin-top: 1rem;
+  padding: 0.75rem;
+  transition:
+    background-color 0.2s,
+    transform 0.2s;
+}
+
+.mobile-money-copy:hover {
+  background-color: #805ad5;
+  transform: translateY(-1px);
+}
+
+.dark .mobile-money-copy {
+  background-color: #553c9a;
+}
+
+.dark .mobile-money-copy:hover {
+  background-color: #6b46c1;
+}
+
+.mobile-money-tariffs summary {
+  color: #1a202c;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.dark .mobile-money-tariffs summary {
+  color: #f7fafc;
+}
+
+.mobile-money-table-wrap {
+  overflow-x: auto;
+  margin-top: 0.75rem;
+}
+
+.mobile-money-table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #1a202c;
+  font-size: 0.875rem;
+}
+
+.dark .mobile-money-table-wrap table {
+  color: #f7fafc;
+}
+
+.mobile-money-table-wrap th,
+.mobile-money-table-wrap td {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 0.6rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.dark .mobile-money-table-wrap th,
+.dark .mobile-money-table-wrap td {
+  border-bottom-color: #4a5568;
+}
+
+.mobile-money-table-wrap th:first-child,
+.mobile-money-table-wrap td:first-child {
+  text-align: left;
+}
+
+@media (max-width: 760px) {
+  .mobile-money-grid,
+  .mobile-money-network-options {
+    grid-template-columns: 1fr;
+  }
+
+  .mobile-money-panel {
+    padding: 1rem;
+  }
+
+  .mobile-money-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .mobile-money-row strong {
+    text-align: left;
+  }
 }
