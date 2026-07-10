@@ -58,6 +58,8 @@ export default function HumanWebCalculator({
   showImportDialog,
   setShowImportDialog,
   showMobileMoney,
+  collapseCalculator,
+  onExpandCalculator,
   onCloseMobileMoney}) {
   const seedLines = [
     "bottles 1.2k x 300 people",
@@ -513,51 +515,70 @@ export default function HumanWebCalculator({
         formatWithCommas={formatWithCommas}
       />
 
-      {/* Left panel */}
-      <div className="panel">
-        <div
-          ref={bannerRef}
-          className="selection-banner"
-        >
-          <span>Selection Total = {formatWithCommas(selectionResult)}</span>
+      {collapseCalculator ? (
+        <div className="calculator-collapsed-panel">
+          <div>
+            <span className="calculator-collapsed-eyebrow">Human Calculator collapsed</span>
+            <strong>{workbookName}</strong>
+            <span>Total: {formatWithCommas(total)}</span>
+          </div>
           <button
-            className="icon-button qr-code-button"
-            onClick={toggleQRCode}
-            title="Generate QR Code"
+            className="calculator-expand-button"
+            type="button"
+            onClick={onExpandCalculator}
           >
-            <QRCodeIcon className="icon" />
+            Expand Calculator
           </button>
         </div>
-        <textarea
-          ref={textareaRef}
-          value={text}
-          onChange={e => setText(e.target.value)}
-          className="calculator-textarea"
-          spellCheck="false"
-        />
-      </div>
-
-      {/* Right panel */}
-      <div className="results-container">
-        <div className="panel" ref={resultsContainerRef}>
-          {lineResults.map((res, idx) => (
-            <div key={idx} className="result-row">
-              <span className="expression">
-                {text.split(/\r?\n/)[idx]}
-              </span>
-              <span className="result">
-                {formatWithCommas(res)}
-              </span>
+      ) : (
+        <>
+          {/* Left panel */}
+          <div className="panel">
+            <div
+              ref={bannerRef}
+              className="selection-banner"
+            >
+              <span>Selection Total = {formatWithCommas(selectionResult)}</span>
+              <button
+                className="icon-button qr-code-button"
+                onClick={toggleQRCode}
+                title="Generate QR Code"
+              >
+                <QRCodeIcon className="icon" />
+              </button>
             </div>
-          ))}
-          <div className="total-row">
-            <span className="total-label">Total:</span>
-            <span className="total-value">
-              {formatWithCommas(total)}
-            </span>
+            <textarea
+              ref={textareaRef}
+              value={text}
+              onChange={e => setText(e.target.value)}
+              className="calculator-textarea"
+              spellCheck="false"
+            />
           </div>
-        </div>
-      </div>
+
+          {/* Right panel */}
+          <div className="results-container">
+            <div className="panel" ref={resultsContainerRef}>
+              {lineResults.map((res, idx) => (
+                <div key={idx} className="result-row">
+                  <span className="expression">
+                    {text.split(/\r?\n/)[idx]}
+                  </span>
+                  <span className="result">
+                    {formatWithCommas(res)}
+                  </span>
+                </div>
+              ))}
+              <div className="total-row">
+                <span className="total-label">Total:</span>
+                <span className="total-value">
+                  {formatWithCommas(total)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {showMobileMoney && (
         <MobileMoneyCalculator onClose={onCloseMobileMoney} />

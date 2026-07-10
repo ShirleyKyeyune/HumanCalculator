@@ -10,6 +10,7 @@ function App() {
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showMobileMoney, setShowMobileMoney] = useState(false);
+  const [collapseCalculator, setCollapseCalculator] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
 
   // Toggle document class for dark mode
@@ -73,6 +74,7 @@ function App() {
               id="mobile-money-button"
               onClick={() => {
                 setShowMobileMoney(true);
+                setCollapseCalculator(true);
                 window.setTimeout(() => {
                   document.getElementById('mobile-money-calculator')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }, 0);
@@ -103,7 +105,12 @@ function App() {
           showImportDialog={showImportDialog}
           setShowImportDialog={setShowImportDialog}
           showMobileMoney={showMobileMoney}
-          onCloseMobileMoney={() => setShowMobileMoney(false)}
+          collapseCalculator={collapseCalculator}
+          onExpandCalculator={() => setCollapseCalculator(false)}
+          onCloseMobileMoney={() => {
+            setShowMobileMoney(false);
+            setCollapseCalculator(false);
+          }}
           darkMode={darkMode}
         />
       </main>

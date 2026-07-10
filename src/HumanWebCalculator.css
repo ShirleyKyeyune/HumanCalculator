@@ -321,6 +321,88 @@ body {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
+.calculator-collapsed-panel {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background-color: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.08),
+    0 4px 6px -4px rgba(0, 0, 0, 0.08);
+  padding: 1rem 1.25rem;
+  text-align: left;
+}
+
+.dark .calculator-collapsed-panel {
+  background-color: #2d3748;
+  border-color: #4a5568;
+}
+
+.calculator-collapsed-panel > div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.calculator-collapsed-eyebrow {
+  color: #718096;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.dark .calculator-collapsed-eyebrow {
+  color: #a0aec0;
+}
+
+.calculator-collapsed-panel strong {
+  color: #1a202c;
+  font-size: 1.1rem;
+}
+
+.dark .calculator-collapsed-panel strong {
+  color: #f7fafc;
+}
+
+.calculator-collapsed-panel span:last-child {
+  color: #4a5568;
+  font-weight: 600;
+}
+
+.dark .calculator-collapsed-panel span:last-child {
+  color: #e2e8f0;
+}
+
+.calculator-expand-button {
+  border: 0;
+  border-radius: 0.5rem;
+  background-color: #6b46c1;
+  color: white;
+  cursor: pointer;
+  flex: 0 0 auto;
+  font-weight: 800;
+  padding: 0.75rem 1rem;
+  transition:
+    background-color 0.2s,
+    transform 0.2s;
+}
+
+.calculator-expand-button:hover {
+  background-color: #805ad5;
+  transform: translateY(-1px);
+}
+
+.dark .calculator-expand-button {
+  background-color: #553c9a;
+}
+
+.dark .calculator-expand-button:hover {
+  background-color: #6b46c1;
+}
+
 /* Workbook controls */
 .workbook-controls {
   display: flex;
@@ -1424,6 +1506,15 @@ body {
 }
 
 @media (max-width: 760px) {
+  .calculator-collapsed-panel {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .calculator-expand-button {
+    width: 100%;
+  }
+
   .mobile-money-grid,
   .mobile-money-network-options {
     grid-template-columns: 1fr;
