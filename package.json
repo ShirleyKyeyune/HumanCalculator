@@ -25,7 +25,9 @@
     "docker:build": "docker build -t human-calculator .",
     "docker:run": "docker run -p 7842:7842 human-calculator",
     "docker:start": "npm run docker:build && npm run docker:run",
-    "docker:dev": "docker run -d -p 7842:7842 --name human-calculator-dev human-calculator",
+    "docker:dev": "docker compose -f docker-compose.dev.yml up --build",
+    "docker:dev:detach": "docker compose -f docker-compose.dev.yml up --build -d",
+    "docker:dev:stop": "docker compose -f docker-compose.dev.yml down",
     "docker:stop": "docker stop human-calculator-dev && docker rm human-calculator-dev",
     "docker:clean": "docker rmi human-calculator"
   },

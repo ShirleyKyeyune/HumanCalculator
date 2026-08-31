@@ -1,0 +1,18 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+
+RUN npm ci
+
+COPY . .
+
+EXPOSE 7842
+
+ENV HOST=0.0.0.0
+ENV PORT=7842
+ENV CHOKIDAR_USEPOLLING=true
+ENV WDS_SOCKET_PORT=7842
+
+CMD ["npm", "start"]

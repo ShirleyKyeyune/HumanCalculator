@@ -6,6 +6,7 @@ import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import * as XLSX from "xlsx";
 import HistoryPanel from "./components/HistoryPanel";
+import SearchPanel from "./components/SearchPanel";
 import QRCodeDisplay from "./components/QRCodeDisplay";
 import MobileMoneyCalculator from "./components/MobileMoneyCalculator";
 import { QRCodeIcon } from "./icons/Icons";
@@ -78,6 +79,7 @@ export default function HumanWebCalculator({
   const [exportFormat, setExportFormat] = useState('pdf');
   const [calculationHistory, setCalculationHistory] = useState([]);
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
+  const [showSearchPanel, setShowSearchPanel] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
   const [qrCodeContent, setQRCodeContent] = useState('');
   const textareaRef = useRef(null);
@@ -110,6 +112,11 @@ export default function HumanWebCalculator({
   // Toggle history panel
   const toggleHistoryPanel = () => {
     setShowHistoryPanel(prev => !prev);
+  };
+
+  // Toggle search panel
+  const toggleSearchPanel = () => {
+    setShowSearchPanel(prev => !prev);
   };
 
   // Toggle QR code display
@@ -496,6 +503,13 @@ export default function HumanWebCalculator({
         History
       </button>
       <button
+        id="search-trigger"
+        onClick={toggleSearchPanel}
+        style={{ display: 'none' }}
+      >
+        Search
+      </button>
+      <button
         id="new-workbook-trigger"
         onClick={createNewWorkbook}
         style={{ display: 'none' }}
@@ -512,6 +526,17 @@ export default function HumanWebCalculator({
         onLoadHistory={loadFromHistory}
         onDeleteHistory={deleteFromHistory}
         onSaveHistory={saveToHistory}
+        formatWithCommas={formatWithCommas}
+      />
+
+      {/* Search Panel */}
+      <SearchPanel
+        isVisible={showSearchPanel}
+        onClose={toggleSearchPanel}
+        workbooks={savedWorkbooks}
+        history={calculationHistory}
+        onOpenWorkbook={loadWorkbook}
+        onOpenHistory={loadFromHistory}
         formatWithCommas={formatWithCommas}
       />
 

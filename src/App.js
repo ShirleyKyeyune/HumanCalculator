@@ -1,7 +1,7 @@
 import './App.css';
 import { useState, useEffect } from 'react';
 import HumanWebCalculator from './HumanWebCalculator';
-import { SunIcon, MoonIcon, ShareIcon, HistoryIcon, WalletIcon } from './icons/Icons';
+import { SunIcon, MoonIcon, ShareIcon, HistoryIcon, WalletIcon, SearchIcon } from './icons/Icons';
 import pkg from '../package.json';
 const calculatorIcon = process.env.PUBLIC_URL + '/favicon.svg';
 
@@ -68,6 +68,14 @@ function App() {
               title="View calculation history"
             >
               <HistoryIcon className="button-icon" /> History
+            </button>
+            <button
+              className="workbook-button"
+              id="search-button"
+              onClick={() => document.getElementById('search-trigger').click()}
+              title="Search saved workbooks and history"
+            >
+              <SearchIcon className="button-icon" /> Search
             </button>
             <button
               className="workbook-button"
