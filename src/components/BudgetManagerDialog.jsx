@@ -81,6 +81,47 @@ function InlineWorkbookPicker({ workbooks, excludeIds, onSelect, onCancel, onCre
 }
 
 /**
+ * Small inline "pick another budget to import" list, used by the
+ * "+ Import Budget" action in Budget Detail. Importing clones the source
+ * budget's tracked categories (fresh, isolated copies - the same mechanism
+ * used when checking a category in the budget form) into the currently open
+ * budget; it never touches the source budget, and never shares a live
+ * category record between the two. Workbooks aren't carried over - this
+ * brings in the category structure as a template, not the source budget's
+ * actual filed items.
+ */
+function InlineBudgetPicker({ budgets, onSelect, onCancel }) {
+  return (
+    <div className="budget-add-workbook-picker">
+      <div className="budget-checklist">
+        {budgets.length > 0 ? (
+          budgets.map(b => (
+            <button
+              key={b.id}
+              type="button"
+              className="budget-checklist-item budget-checklist-pick"
+              onClick={() => onSelect(b)}
+            >
+              <span className="budget-checklist-workbook-name">{b.name}</span>
+              <span className="budget-checklist-workbook-meta">
+                {(b.categoryIds || []).length} categor{(b.categoryIds || []).length === 1 ? 'y' : 'ies'}
+              </span>
+            </button>
+          ))
+        ) : (
+          <p className="budget-checklist-empty">No other budgets to import from.</p>
+        )}
+      </div>
+      <div className="budget-add-workbook-picker-actions">
+        <button type="button" className="category-cancel-button" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Every workbook that belongs to a budget - explicitly attached, or filed
  * under one of the budget's categories (rolled up through subcategories) -
  * regardless of paid status. Unlike computeBudgetSpent (which only counts
@@ -364,62 +405,62 @@ function BudgetCategoryNode({
               {node.directItems.map(wb => {
                 const { paid, remaining, status } = getPaymentStatus(wb);
                 return (
-                <li
-                  key={wb.id}
-                  className="spending-workbook-row clickable"
-                  onClick={() => onQuickView(wb)}
-                >
-                  <div className="spending-workbook-info">
-                    <span className="spending-workbook-name">{wb.name}</span>
-                    <span className="spending-workbook-date">{wb.paidAtDisplay || wb.displayDate}</span>
-                  </div>
-                  {status === 'paid' ? (
-                    <span className="workbook-paid-badge paid">{formatWithCommas(paid)}</span>
-                  ) : status === 'partial' ? (
-                    <span className="workbook-paid-badge partial">
-                      Partial &middot; {formatWithCommas(paid)} of {formatWithCommas(paid + remaining)}
-                    </span>
-                  ) : (
-                    <span className="workbook-paid-badge unpaid">
-                      Unpaid &middot; {formatWithCommas(remaining)}
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    className="workbook-quick-view-trigger"
-                    onClick={(e) => { e.stopPropagation(); onQuickView(wb); }}
-                    title="Quick view"
-                    aria-label={`Quick view ${wb.name}`}
+                  <li
+                    key={wb.id}
+                    className="spending-workbook-row clickable"
+                    onClick={() => onQuickView(wb)}
                   >
-                    &#128065;
-                  </button>
-                  <ActionMenu
-                    label={`Actions for ${wb.name}`}
-                    items={[
-                      {
-                        key: 'open',
-                        label: 'Open',
-                        onClick: () => onOpenWorkbook(wb)
-                      },
-                      {
-                        key: 'mark-paid',
-                        label: status === 'paid' ? 'Edit Payment' : status === 'partial' ? 'Record Payment' : 'Mark as Paid',
-                        onClick: () => onMarkPaid(wb)
-                      },
-                      !isUncategorized && {
-                        key: 'untag',
-                        label: 'Untag (remove from category)',
-                        onClick: () => handleUnlinkCategory(wb)
-                      },
-                      isExplicitlyAttached(wb) && {
-                        key: 'unlink',
-                        label: 'Unlink (remove from budget)',
-                        danger: true,
-                        onClick: () => handleUnlinkBudget(wb)
-                      }
-                    ]}
-                  />
-                </li>
+                    <div className="spending-workbook-info">
+                      <span className="spending-workbook-name">{wb.name}</span>
+                      <span className="spending-workbook-date">{wb.paidAtDisplay || wb.displayDate}</span>
+                    </div>
+                    {status === 'paid' ? (
+                      <span className="workbook-paid-badge paid">{formatWithCommas(paid)}</span>
+                    ) : status === 'partial' ? (
+                      <span className="workbook-paid-badge partial">
+                        Partial &middot; {formatWithCommas(paid)} of {formatWithCommas(paid + remaining)}
+                      </span>
+                    ) : (
+                      <span className="workbook-paid-badge unpaid">
+                        Unpaid &middot; {formatWithCommas(remaining)}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      className="workbook-quick-view-trigger"
+                      onClick={(e) => { e.stopPropagation(); onQuickView(wb); }}
+                      title="Quick view"
+                      aria-label={`Quick view ${wb.name}`}
+                    >
+                      &#128065;
+                    </button>
+                    <ActionMenu
+                      label={`Actions for ${wb.name}`}
+                      items={[
+                        {
+                          key: 'open',
+                          label: 'Open',
+                          onClick: () => onOpenWorkbook(wb)
+                        },
+                        {
+                          key: 'mark-paid',
+                          label: status === 'paid' ? 'Edit Payment' : status === 'partial' ? 'Record Payment' : 'Mark as Paid',
+                          onClick: () => onMarkPaid(wb)
+                        },
+                        !isUncategorized && {
+                          key: 'untag',
+                          label: 'Untag (remove from category)',
+                          onClick: () => handleUnlinkCategory(wb)
+                        },
+                        isExplicitlyAttached(wb) && {
+                          key: 'unlink',
+                          label: 'Unlink (remove from budget)',
+                          danger: true,
+                          onClick: () => handleUnlinkBudget(wb)
+                        }
+                      ]}
+                    />
+                  </li>
                 );
               })}
             </ul>
@@ -465,6 +506,7 @@ function BudgetCategoryNode({
  */
 function BudgetDetail({
   budget,
+  budgets,
   workbooks,
   categories,
   onOpenWorkbook,
@@ -476,6 +518,7 @@ function BudgetDetail({
   onSetCategoryLimit,
   onRenameCategory,
   onUpdateBudget,
+  onCloneCategories,
   onCreateWorkbook,
   onMarkPaid,
   formatWithCommas
@@ -484,7 +527,13 @@ function BudgetDetail({
   const [isAddingRootCategory, setIsAddingRootCategory] = useState(false);
   const [newRootCategoryName, setNewRootCategoryName] = useState('');
   const [isAddingWorkbook, setIsAddingWorkbook] = useState(false);
+  const [isImportingBudget, setIsImportingBudget] = useState(false);
   const [quickViewWorkbook, setQuickViewWorkbook] = useState(null);
+
+  const otherBudgets = useMemo(
+    () => budgets.filter(b => b.id !== budget.id),
+    [budgets, budget.id]
+  );
 
   const unfiledExcludeIds = useMemo(
     () => new Set(budget.workbookIds || []),
@@ -616,6 +665,27 @@ function BudgetDetail({
     setIsAddingWorkbook(false);
   };
 
+  // Cloning (rather than reusing the source budget's category ids directly)
+  // keeps this budget's copy fully isolated, same as every other path that
+  // adds a category here - the source budget is never touched, and nothing
+  // filed into this imported copy can ever show up back in the source.
+  const handleImportBudget = (sourceBudget) => {
+    const sourceRootIds = sourceBudget.categoryIds || [];
+    if (sourceRootIds.length > 0) {
+      // cloneCategoriesAsEmpty only clones upward (ancestors) - descendants
+      // have to be included explicitly here so the imported copy keeps the
+      // source's full subtree structure, not just its tracked root ids.
+      const allSourceIds = Array.from(new Set(
+        sourceRootIds.flatMap(id => getDescendantIds(categories, id))
+      ));
+      const cloneMapping = onCloneCategories(allSourceIds);
+      const importedRootIds = sourceRootIds.map(id => cloneMapping[id] || id);
+      const currentIds = budget.categoryIds || [];
+      onUpdateBudget(budget.id, { categoryIds: [...currentIds, ...importedRootIds] });
+    }
+    setIsImportingBudget(false);
+  };
+
   const paidPct = budget.amount > 0 ? Math.min(100, (spent / budget.amount) * 100) : 0;
   const pendingPct = budget.amount > 0 ? Math.min(100 - paidPct, (pending / budget.amount) * 100) : 0;
   const isOver = availableBalance < 0;
@@ -660,18 +730,33 @@ function BudgetDetail({
         <button
           type="button"
           className="budget-folder-action-button"
-          onClick={() => { setIsAddingRootCategory(v => !v); setIsAddingWorkbook(false); }}
+          onClick={() => { setIsAddingRootCategory(v => !v); setIsAddingWorkbook(false); setIsImportingBudget(false); }}
         >
           + Add Category
         </button>
         <button
           type="button"
           className="budget-folder-action-button"
-          onClick={() => { setIsAddingWorkbook(v => !v); setIsAddingRootCategory(false); }}
+          onClick={() => { setIsAddingWorkbook(v => !v); setIsAddingRootCategory(false); setIsImportingBudget(false); }}
         >
           + Add Workbook
         </button>
+        <button
+          type="button"
+          className="budget-folder-action-button"
+          onClick={() => { setIsImportingBudget(v => !v); setIsAddingRootCategory(false); setIsAddingWorkbook(false); }}
+        >
+          Import Budget
+        </button>
       </div>
+
+      {isImportingBudget && (
+        <InlineBudgetPicker
+          budgets={otherBudgets}
+          onSelect={handleImportBudget}
+          onCancel={() => setIsImportingBudget(false)}
+        />
+      )}
 
       {isAddingRootCategory && (
         <div className="category-add-inline">
@@ -1060,6 +1145,7 @@ function BudgetManagerDialog({
         ) : mode === 'detail' && viewingBudget ? (
           <BudgetDetail
             budget={viewingBudget}
+            budgets={budgets}
             workbooks={workbooks}
             categories={categories}
             onOpenWorkbook={handleOpenFromDetail}
@@ -1071,6 +1157,7 @@ function BudgetManagerDialog({
             onSetCategoryLimit={onSetCategoryLimit}
             onRenameCategory={onRenameCategory}
             onUpdateBudget={onUpdateBudget}
+            onCloneCategories={onCloneCategories}
             onCreateWorkbook={handleCreateWorkbookFromDetail}
             onMarkPaid={handleMarkPaidFromDetail}
             formatWithCommas={formatWithCommas}
@@ -1195,6 +1282,18 @@ InlineWorkbookPicker.propTypes = {
   onCreateNew: PropTypes.func.isRequired
 };
 
+InlineBudgetPicker.propTypes = {
+  budgets: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      name: PropTypes.string.isRequired,
+      categoryIds: PropTypes.arrayOf(PropTypes.string)
+    })
+  ).isRequired,
+  onSelect: PropTypes.func.isRequired,
+  onCancel: PropTypes.func.isRequired
+};
+
 BudgetCategoryNode.propTypes = {
   node: budgetCategoryNodeShape.isRequired,
   depth: PropTypes.number.isRequired,
@@ -1219,6 +1318,7 @@ BudgetCategoryNode.propTypes = {
 
 BudgetDetail.propTypes = {
   budget: budgetShape.isRequired,
+  budgets: PropTypes.arrayOf(budgetShape).isRequired,
   workbooks: PropTypes.arrayOf(workbookShape).isRequired,
   categories: PropTypes.arrayOf(categoryShape).isRequired,
   onOpenWorkbook: PropTypes.func.isRequired,
@@ -1230,6 +1330,7 @@ BudgetDetail.propTypes = {
   onSetCategoryLimit: PropTypes.func.isRequired,
   onRenameCategory: PropTypes.func.isRequired,
   onUpdateBudget: PropTypes.func.isRequired,
+  onCloneCategories: PropTypes.func.isRequired,
   onCreateWorkbook: PropTypes.func.isRequired,
   onMarkPaid: PropTypes.func.isRequired,
   formatWithCommas: PropTypes.func.isRequired
