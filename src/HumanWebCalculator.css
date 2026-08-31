@@ -1094,6 +1094,17 @@ body {
   transition: background-color 0.2s;
 }
 
+/* Shared "action in flight" look: dims the control and blocks further
+   clicks so a heavy or double-click-sensitive action can't be re-fired
+   before its first invocation finishes. */
+.dialog-button:disabled,
+.budget-checklist-pick:disabled,
+.category-cancel-button:disabled,
+.budget-folder-action-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .dialog-button.cancel {
   background-color: #e2e8f0;
   color: #4a5568;

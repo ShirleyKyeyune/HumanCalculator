@@ -90,7 +90,7 @@ function InlineWorkbookPicker({ workbooks, excludeIds, onSelect, onCancel, onCre
  * brings in the category structure as a template, not the source budget's
  * actual filed items.
  */
-function InlineBudgetPicker({ budgets, onSelect, onCancel }) {
+function InlineBudgetPicker({ budgets, onSelect, onCancel, isImporting }) {
   return (
     <div className="budget-add-workbook-picker">
       <div className="budget-checklist">
@@ -101,10 +101,13 @@ function InlineBudgetPicker({ budgets, onSelect, onCancel }) {
               type="button"
               className="budget-checklist-item budget-checklist-pick"
               onClick={() => onSelect(b)}
+              disabled={isImporting}
             >
               <span className="budget-checklist-workbook-name">{b.name}</span>
               <span className="budget-checklist-workbook-meta">
-                {(b.categoryIds || []).length} categor{(b.categoryIds || []).length === 1 ? 'y' : 'ies'}
+                {isImporting
+                  ? 'Importing...'
+                  : `${(b.categoryIds || []).length} categor${(b.categoryIds || []).length === 1 ? 'y' : 'ies'}`}
               </span>
             </button>
           ))
@@ -113,7 +116,7 @@ function InlineBudgetPicker({ budgets, onSelect, onCancel }) {
         )}
       </div>
       <div className="budget-add-workbook-picker-actions">
-        <button type="button" className="category-cancel-button" onClick={onCancel}>
+        <button type="button" className="category-cancel-button" onClick={onCancel} disabled={isImporting}>
           Cancel
         </button>
       </div>
@@ -528,6 +531,10 @@ function BudgetDetail({
   const [newRootCategoryName, setNewRootCategoryName] = useState('');
   const [isAddingWorkbook, setIsAddingWorkbook] = useState(false);
   const [isImportingBudget, setIsImportingBudget] = useState(false);
+  // Cloning a whole category subtree can mean several localStorage writes
+  // in a row - guard + disable the picker while it runs so a rapid
+  // double-click on the same source budget can't import it twice.
+  const [isImporting, setIsImporting] = useState(false);
   const [quickViewWorkbook, setQuickViewWorkbook] = useState(null);
 
   const otherBudgets = useMemo(
@@ -670,6 +677,8 @@ function BudgetDetail({
   // adds a category here - the source budget is never touched, and nothing
   // filed into this imported copy can ever show up back in the source.
   const handleImportBudget = (sourceBudget) => {
+    if (isImporting) return;
+    setIsImporting(true);
     const sourceRootIds = sourceBudget.categoryIds || [];
     if (sourceRootIds.length > 0) {
       // cloneCategoriesAsEmpty only clones upward (ancestors) - descendants
@@ -684,6 +693,7 @@ function BudgetDetail({
       onUpdateBudget(budget.id, { categoryIds: [...currentIds, ...importedRootIds] });
     }
     setIsImportingBudget(false);
+    setIsImporting(false);
   };
 
   const paidPct = budget.amount > 0 ? Math.min(100, (spent / budget.amount) * 100) : 0;
@@ -755,6 +765,7 @@ function BudgetDetail({
           budgets={otherBudgets}
           onSelect={handleImportBudget}
           onCancel={() => setIsImportingBudget(false)}
+          isImporting={isImporting}
         />
       )}
 
@@ -845,6 +856,11 @@ function BudgetForm({ initialBudget, categories, workbooks, onSave, onCancel, on
   const [categoryIds, setCategoryIds] = useState(() => new Set(initialBudget?.categoryIds || []));
   const [workbookIds, setWorkbookIds] = useState(() => new Set(initialBudget?.workbookIds || []));
   const [workbookSearch, setWorkbookSearch] = useState('');
+  // Cloning newly-selected categories means one or more localStorage writes
+  // before this form unmounts - guard + disable the submit button so a
+  // rapid double-click can't create the budget (or clone its categories)
+  // twice.
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Categories already tracked by this budget before this editing session -
   // only newly-checked ones (not these) get cloned into fresh empty copies
@@ -873,8 +889,10 @@ function BudgetForm({ initialBudget, categories, workbooks, onSave, onCancel, on
   };
 
   const handleSubmit = () => {
+    if (isSubmitting) return;
     const parsedAmount = parseFloat(amount);
     if (!name.trim() || !Number.isFinite(parsedAmount)) return;
+    setIsSubmitting(true);
 
     // Selecting an existing category here should give this budget its own
     // isolated copy, not link it to whatever is already filed under that
@@ -1001,11 +1019,13 @@ function BudgetForm({ initialBudget, categories, workbooks, onSave, onCancel, on
       </div>
 
       <div className="dialog-buttons">
-        <button onClick={onCancel} className="dialog-button cancel">
+        <button onClick={onCancel} className="dialog-button cancel" disabled={isSubmitting}>
           Cancel
         </button>
-        <button onClick={handleSubmit} className="dialog-button save">
-          {initialBudget ? 'Save Changes' : 'Create Budget'}
+        <button onClick={handleSubmit} className="dialog-button save" disabled={isSubmitting}>
+          {isSubmitting
+            ? (initialBudget ? 'Saving...' : 'Creating...')
+            : (initialBudget ? 'Save Changes' : 'Create Budget')}
         </button>
       </div>
     </div>
@@ -1291,7 +1311,8 @@ InlineBudgetPicker.propTypes = {
     })
   ).isRequired,
   onSelect: PropTypes.func.isRequired,
-  onCancel: PropTypes.func.isRequired
+  onCancel: PropTypes.func.isRequired,
+  isImporting: PropTypes.bool.isRequired
 };
 
 BudgetCategoryNode.propTypes = {

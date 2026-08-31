@@ -59,6 +59,12 @@ function PaymentDialog({
 
   const [categoryId, setCategoryId] = useState(workbook?.categoryId || null);
 
+  // Guards against a rapid double-click firing the save twice (e.g.
+  // double-recording the same payment) before the dialog has a chance to
+  // close - the button disables and relabels the instant the first click
+  // is handled.
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   if (!isVisible || !workbook) return null;
 
   const computeNewPaymentAmount = () => {
@@ -79,6 +85,8 @@ function PaymentDialog({
   };
 
   const handleRecordPayment = () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     const paidAt = computePaidAt();
     const newPaymentAmount = computeNewPaymentAmount();
     const newAmountPaid = alreadyPaid + newPaymentAmount;
@@ -103,6 +111,8 @@ function PaymentDialog({
   };
 
   const handleResetPayments = () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     onSave(workbook.id, {
       isPaid: false,
       amountPaid: null,
@@ -238,15 +248,21 @@ function PaymentDialog({
 
         <div className="dialog-buttons payment-dialog-buttons">
           {hasExistingPayment && (
-            <button onClick={handleResetPayments} className="dialog-button remove-payment">
-              Reset Payments
+            <button
+              onClick={handleResetPayments}
+              className="dialog-button remove-payment"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Resetting...' : 'Reset Payments'}
             </button>
           )}
-          <button onClick={onClose} className="dialog-button cancel">
+          <button onClick={onClose} className="dialog-button cancel" disabled={isSubmitting}>
             Cancel
           </button>
-          <button onClick={handleRecordPayment} className="dialog-button save">
-            {hasExistingPayment ? 'Record Payment' : 'Mark as Paid'}
+          <button onClick={handleRecordPayment} className="dialog-button save" disabled={isSubmitting}>
+            {isSubmitting
+              ? (hasExistingPayment ? 'Recording...' : 'Saving...')
+              : (hasExistingPayment ? 'Record Payment' : 'Mark as Paid')}
           </button>
         </div>
       </div>
