@@ -58,6 +58,20 @@ function WorkbookQuickView({ workbook, formatWithCommas, onClose, onOpenFull }) 
           )}
         </div>
         <pre className="workbook-quick-view-content">{workbook.content || '(empty)'}</pre>
+        {workbook.payments && workbook.payments.length > 0 && (
+          <div className="workbook-quick-view-payments">
+            <h5>Payment History</h5>
+            <ul className="workbook-payment-history-list">
+              {workbook.payments.slice().reverse().map((p, i) => (
+                <li key={i} className="workbook-payment-history-item">
+                  <span className="workbook-payment-history-amount">{formatWithCommas(p.amount)}</span>
+                  {p.note && <span className="workbook-payment-history-note">{p.note}</span>}
+                  <span className="workbook-payment-history-date">{p.paidAtDisplay}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <div className="dialog-buttons">
           <button type="button" className="dialog-button cancel" onClick={onClose}>
             Close
@@ -81,7 +95,14 @@ WorkbookQuickView.propTypes = {
     displayDate: PropTypes.string,
     isPaid: PropTypes.bool,
     amountPaid: PropTypes.number,
-    paidAtDisplay: PropTypes.string
+    paidAtDisplay: PropTypes.string,
+    payments: PropTypes.arrayOf(
+      PropTypes.shape({
+        amount: PropTypes.number,
+        note: PropTypes.string,
+        paidAtDisplay: PropTypes.string
+      })
+    )
   }).isRequired,
   formatWithCommas: PropTypes.func.isRequired,
   onClose: PropTypes.func.isRequired,

@@ -51,6 +51,7 @@ function PaymentDialog({
 
   const [amountMode, setAmountMode] = useState(remaining > 0 ? 'full' : 'other');
   const [customAmount, setCustomAmount] = useState('');
+  const [note, setNote] = useState('');
 
   const [dateMode, setDateMode] = useState('now');
   const [timeValue, setTimeValue] = useState(toTimeInputValue(new Date()));
@@ -81,12 +82,21 @@ function PaymentDialog({
     const paidAt = computePaidAt();
     const newPaymentAmount = computeNewPaymentAmount();
     const newAmountPaid = alreadyPaid + newPaymentAmount;
+    const trimmedNote = note.trim();
+
+    const paymentEntry = {
+      amount: newPaymentAmount,
+      note: trimmedNote || null,
+      paidAt: paidAt.toISOString(),
+      paidAtDisplay: formatDateTimeForDisplay(paidAt)
+    };
 
     onSave(workbook.id, {
       isPaid: newAmountPaid >= total,
       amountPaid: newAmountPaid,
       paidAt: paidAt.toISOString(),
       paidAtDisplay: formatDateTimeForDisplay(paidAt),
+      payments: [...(workbook.payments || []), paymentEntry],
       categoryId
     });
     onClose();
@@ -97,7 +107,8 @@ function PaymentDialog({
       isPaid: false,
       amountPaid: null,
       paidAt: null,
-      paidAtDisplay: null
+      paidAtDisplay: null,
+      payments: []
     });
     onClose();
   };
@@ -165,6 +176,15 @@ function PaymentDialog({
               autoFocus
             />
           )}
+
+          <label className="payment-section-label">Note (optional)</label>
+          <input
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="e.g. labor, deposit, first installment..."
+            className="dialog-input"
+          />
 
           <label className="payment-section-label">Category</label>
           <CategoryPicker

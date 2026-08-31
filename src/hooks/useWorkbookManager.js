@@ -108,10 +108,16 @@ function useWorkbookManager(text, setText, workbookName, setWorkbookName, showSa
       displayDate: formattedDate,
       // Payment tracking - kept flat so this stays simple, plain JSON
       // that can sync to a file-based backend (e.g. Google Drive) later.
+      // `amountPaid` is a running total of every payment recorded (see
+      // PaymentDialog); `payments` is a lightweight history of each of
+      // those recordings (amount, optional note, date) purely for display -
+      // it's never read for balance math, so it can't drift out of sync
+      // with `amountPaid`.
       isPaid: false,
       amountPaid: null,
       paidAt: null,
       paidAtDisplay: null,
+      payments: [],
       categoryId: null
     };
 
