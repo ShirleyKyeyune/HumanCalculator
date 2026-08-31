@@ -23,9 +23,13 @@ const formatDateTimeForDisplay = (date) =>
 /**
  * PaymentDialog Component
  *
- * Lets the user mark a workbook as paid: pick a quick or custom amount,
- * assign a category/subcategory (creating new ones inline), and capture
- * when it was paid via quick date/time options.
+ * Records a payment against a workbook: `amountPaid` is a running total of
+ * every payment made so far, so this dialog always records an amount to
+ * *add* on top of whatever's already been paid, rather than replacing it -
+ * that's what makes a partial payment (e.g. "10K of the 50K labor cost")
+ * correctly reduce the remaining balance instead of either being ignored or
+ * flipping the whole workbook to fully paid. `isPaid` is derived and kept in
+ * sync (`amountPaid >= total`) every time a payment is recorded.
  */
 function PaymentDialog({
   isVisible,
@@ -41,27 +45,23 @@ function PaymentDialog({
     [workbook]
   );
 
-  const wasAlreadyPaid = !!workbook?.isPaid;
+  const alreadyPaid = Math.max(0, workbook?.amountPaid || 0);
+  const remaining = Math.max(0, total - alreadyPaid);
+  const hasExistingPayment = alreadyPaid > 0;
 
-  const [amountMode, setAmountMode] = useState(
-    wasAlreadyPaid && workbook.amountPaid !== total ? 'other' : 'full'
-  );
-  const [customAmount, setCustomAmount] = useState(
-    wasAlreadyPaid ? String(workbook.amountPaid ?? '') : ''
-  );
+  const [amountMode, setAmountMode] = useState(remaining > 0 ? 'full' : 'other');
+  const [customAmount, setCustomAmount] = useState('');
 
-  const [dateMode, setDateMode] = useState(wasAlreadyPaid ? 'custom' : 'now');
+  const [dateMode, setDateMode] = useState('now');
   const [timeValue, setTimeValue] = useState(toTimeInputValue(new Date()));
-  const [customDateTime, setCustomDateTime] = useState(
-    toDateTimeInputValue(wasAlreadyPaid && workbook.paidAt ? new Date(workbook.paidAt) : new Date())
-  );
+  const [customDateTime, setCustomDateTime] = useState(toDateTimeInputValue(new Date()));
 
   const [categoryId, setCategoryId] = useState(workbook?.categoryId || null);
 
   if (!isVisible || !workbook) return null;
 
-  const computeAmount = () => {
-    if (amountMode === 'full') return total;
+  const computeNewPaymentAmount = () => {
+    if (amountMode === 'full') return remaining;
     const parsed = parseFloat(customAmount);
     return Number.isFinite(parsed) ? parsed : 0;
   };
@@ -77,12 +77,14 @@ function PaymentDialog({
     return customDateTime ? new Date(customDateTime) : new Date();
   };
 
-  const handleMarkPaid = () => {
+  const handleRecordPayment = () => {
     const paidAt = computePaidAt();
+    const newPaymentAmount = computeNewPaymentAmount();
+    const newAmountPaid = alreadyPaid + newPaymentAmount;
 
     onSave(workbook.id, {
-      isPaid: true,
-      amountPaid: computeAmount(),
+      isPaid: newAmountPaid >= total,
+      amountPaid: newAmountPaid,
       paidAt: paidAt.toISOString(),
       paidAtDisplay: formatDateTimeForDisplay(paidAt),
       categoryId
@@ -90,7 +92,7 @@ function PaymentDialog({
     onClose();
   };
 
-  const handleRemovePayment = () => {
+  const handleResetPayments = () => {
     onSave(workbook.id, {
       isPaid: false,
       amountPaid: null,
@@ -100,11 +102,17 @@ function PaymentDialog({
     onClose();
   };
 
+  const title = !hasExistingPayment
+    ? 'Mark as Paid'
+    : remaining > 0
+      ? 'Record Payment'
+      : 'Edit Payment';
+
   return (
     <div className="dialog-overlay">
       <div className="dialog payment-dialog">
         <div className="dialog-header">
-          <h3>{wasAlreadyPaid ? 'Edit Payment' : 'Mark as Paid'}</h3>
+          <h3>{title}</h3>
           <button
             type="button"
             className="close-panel-button"
@@ -116,16 +124,30 @@ function PaymentDialog({
         </div>
         <p className="payment-dialog-workbook-name">{workbook.name}</p>
 
+        {hasExistingPayment && (
+          <div className="payment-dialog-balance">
+            <span>Total: {formatWithCommas(total)}</span>
+            <span>Already paid: {formatWithCommas(alreadyPaid)}</span>
+            <span className={remaining > 0 ? 'payment-dialog-balance-owing' : 'payment-dialog-balance-clear'}>
+              {remaining > 0 ? `Remaining: ${formatWithCommas(remaining)}` : 'Fully paid'}
+            </span>
+          </div>
+        )}
+
         <div className="dialog-content">
-          <label className="payment-section-label">Amount Paid</label>
+          <label className="payment-section-label">
+            {hasExistingPayment ? 'New Payment Amount' : 'Amount Paid'}
+          </label>
           <div className="payment-quick-options">
-            <button
-              type="button"
-              className={`payment-quick-button ${amountMode === 'full' ? 'active' : ''}`}
-              onClick={() => setAmountMode('full')}
-            >
-              Full Amount ({formatWithCommas(total)})
-            </button>
+            {remaining > 0 && (
+              <button
+                type="button"
+                className={`payment-quick-button ${amountMode === 'full' ? 'active' : ''}`}
+                onClick={() => setAmountMode('full')}
+              >
+                {hasExistingPayment ? `Remaining Balance (${formatWithCommas(remaining)})` : `Full Amount (${formatWithCommas(total)})`}
+              </button>
+            )}
             <button
               type="button"
               className={`payment-quick-button ${amountMode === 'other' ? 'active' : ''}`}
@@ -195,16 +217,16 @@ function PaymentDialog({
         </div>
 
         <div className="dialog-buttons payment-dialog-buttons">
-          {wasAlreadyPaid && (
-            <button onClick={handleRemovePayment} className="dialog-button remove-payment">
-              Remove Payment
+          {hasExistingPayment && (
+            <button onClick={handleResetPayments} className="dialog-button remove-payment">
+              Reset Payments
             </button>
           )}
           <button onClick={onClose} className="dialog-button cancel">
             Cancel
           </button>
-          <button onClick={handleMarkPaid} className="dialog-button save">
-            {wasAlreadyPaid ? 'Save Changes' : 'Mark as Paid'}
+          <button onClick={handleRecordPayment} className="dialog-button save">
+            {hasExistingPayment ? 'Record Payment' : 'Mark as Paid'}
           </button>
         </div>
       </div>

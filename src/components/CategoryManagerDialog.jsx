@@ -1,305 +1,91 @@
 import React, { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
-import { MAX_DEPTH, getChildren, getDepth, getDescendantIds, flattenTree } from '../hooks/useCategories';
-import ActionMenu from './ActionMenu';
-import ColorSwatchPicker from './ColorSwatchPicker';
-import CategoryLimitEditor from './CategoryLimitEditor';
 import WorkbookQuickView from './WorkbookQuickView';
 
-const UNCATEGORIZED_ID = '__uncategorized__';
+const UNCATEGORIZED_KEY = '__uncategorized__';
 
 /**
- * A workbook row inside a category folder: draggable, offers a "Move to"
- * select as the non-drag fallback for reassigning it, and a quick-view
- * button to peek at its content without leaving this panel.
+ * One workbook inside a grouped category listing: read-only here (no drag,
+ * no "Move to") - Manage Categories is a browsing/aggregation view, not an
+ * editing surface, since a grouped name can represent several budgets'
+ * separate underlying categories at once (see CategoryManagerDialog docs
+ * below). A small tag shows the workbook's own (sub)category name when it
+ * differs from the group it's rolled up under, so flattening the tree for
+ * display doesn't lose which specific folder something was actually filed
+ * in.
  */
-function WorkbookRow({ workbook, moveOptions, onMoveWorkbook, onQuickView }) {
+function GroupedWorkbookRow({ workbook, categoryName, groupName, onQuickView }) {
+  const showSubTag = categoryName && categoryName.toLowerCase() !== groupName.toLowerCase();
+
   return (
-    <li
-      className="category-tree-workbook-row"
-      draggable
-      onDragStart={(e) => {
-        e.dataTransfer.setData('text/plain', workbook.id);
-        e.dataTransfer.effectAllowed = 'move';
-      }}
-    >
+    <li className="category-tree-workbook-row clickable" onClick={() => onQuickView(workbook)}>
       <span className="category-tree-workbook-name">{workbook.name}</span>
+      {showSubTag && <span className="category-tree-workbook-subtag">{categoryName}</span>}
       <span className="category-tree-workbook-date">{workbook.displayDate}</span>
       <button
         type="button"
         className="workbook-quick-view-trigger"
-        onClick={() => onQuickView(workbook)}
+        onClick={(e) => { e.stopPropagation(); onQuickView(workbook); }}
         title="Quick view"
         aria-label={`Quick view ${workbook.name}`}
       >
         &#128065;
       </button>
-      <select
-        value={workbook.categoryId || ''}
-        onChange={(e) => onMoveWorkbook(workbook.id, e.target.value || null)}
-        className="category-tree-workbook-move-select"
-        aria-label={`Move ${workbook.name} to a different category`}
-      >
-        <option value="">Uncategorized</option>
-        {moveOptions.map(opt => (
-          <option key={opt.id} value={opt.id}>
-            {'› '.repeat(opt.depth)}{opt.name}
-          </option>
-        ))}
-      </select>
     </li>
   );
 }
 
 /**
- * One folder in the category tree: its own workbooks (if expanded), plus
- * its children rendered recursively. Acts as a drop target for workbooks
- * dragged from anywhere in the panel.
+ * One grouped row: a category name (e.g. "Groceries"), aggregated across
+ * every budget's own isolated copy of it, plus every workbook filed
+ * anywhere under it or any of its subcategories - flattened into one list
+ * rather than a nested tree, since the underlying subcategory shape can
+ * differ from budget to budget.
  */
-function CategoryTreeNode({
-  node,
-  depth,
-  categories,
-  workbooks,
-  workbooksByCategory,
-  moveOptions,
-  expandedIds,
-  onToggleExpand,
-  dragOverId,
-  onDragOverNode,
-  onDragLeaveNode,
-  onDropOnNode,
-  onAddCategory,
-  onRenameCategory,
-  onDeleteCategory,
-  onSetColor,
-  onSetLimit,
-  onMoveWorkbook,
-  onQuickView,
-  formatWithCommas
-}) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editName, setEditName] = useState(node.name);
-  const [isAddingChild, setIsAddingChild] = useState(false);
-  const [newChildName, setNewChildName] = useState('');
-  const [isPickingColor, setIsPickingColor] = useState(false);
-  const [isSettingLimit, setIsSettingLimit] = useState(false);
-
-  const children = getChildren(categories, node.id);
-  const canAddChild = getDepth(categories, node.id) < MAX_DEPTH - 1;
-  const directWorkbooks = workbooksByCategory.get(node.id) || [];
-  const isExpanded = expandedIds.has(node.id);
-  const isDragOver = dragOverId === node.id;
-
-  const handleSaveRename = () => {
-    if (editName.trim()) {
-      onRenameCategory(node.id, editName);
-    }
-    setIsEditing(false);
-  };
-
-  const handleConfirmAddChild = () => {
-    if (newChildName.trim()) {
-      onAddCategory(newChildName, node.id);
-    }
-    setNewChildName('');
-    setIsAddingChild(false);
-  };
-
-  const handleDelete = () => {
-    const removedIds = getDescendantIds(categories, node.id);
-    const affectedCount = workbooks.filter(wb => wb.categoryId && removedIds.includes(wb.categoryId)).length;
-    const descendantCount = removedIds.length - 1;
-
-    let message = `Delete "${node.name}"?`;
-    if (descendantCount > 0) {
-      message += ` This also deletes ${descendantCount} subcategor${descendantCount === 1 ? 'y' : 'ies'} under it.`;
-    }
-    if (affectedCount > 0) {
-      message += ` ${affectedCount} workbook${affectedCount === 1 ? '' : 's'} using ${descendantCount > 0 ? 'these categories' : 'this category'} will become uncategorized.`;
-    }
-
-    if (window.confirm(message)) {
-      onDeleteCategory(node.id);
-    }
-  };
-
+function CategoryGroupRow({ name, color, entries, isExpanded, onToggle, onQuickView }) {
   return (
     <li className="category-tree-item">
       <div
-        className={`category-tree-row ${isDragOver ? 'drag-over' : ''}`}
-        style={{ paddingLeft: `${depth * 1.25}rem` }}
-        onDragOver={(e) => { e.preventDefault(); onDragOverNode(node.id); }}
-        onDragLeave={() => onDragLeaveNode(node.id)}
-        onDrop={(e) => { e.preventDefault(); onDropOnNode(node.id, e); }}
+        className={`category-tree-row clickable ${isExpanded ? 'expanded' : ''}`}
+        onClick={onToggle}
+        role="button"
+        tabIndex={0}
+        aria-expanded={isExpanded}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(); } }}
       >
-        {isEditing ? (
-          <div className="category-tree-edit-row">
-            <input
-              type="text"
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              className="dialog-input"
-              autoFocus
-              onKeyDown={(e) => { if (e.key === 'Enter') handleSaveRename(); }}
+        <div className="category-tree-name-group">
+          <span
+            className="category-tree-expand-button"
+            aria-hidden="true"
+          >
+            <span className={`spending-expand-caret ${isExpanded ? 'expanded' : ''}`}>&#9656;</span>
+          </span>
+          {color !== undefined && (
+            <span
+              className={`category-color-dot ${color ? '' : 'none'}`}
+              style={color ? { backgroundColor: color } : undefined}
+              aria-hidden="true"
             />
-            <button type="button" className="category-add-button" onClick={handleSaveRename}>Save</button>
-            <button
-              type="button"
-              className="category-cancel-button"
-              onClick={() => { setIsEditing(false); setEditName(node.name); }}
-            >
-              Cancel
-            </button>
-          </div>
-        ) : (
-          <>
-            <div className="category-tree-name-group">
-              <button
-                type="button"
-                className="category-tree-expand-button"
-                onClick={() => onToggleExpand(node.id)}
-                aria-expanded={isExpanded}
-                aria-label={isExpanded ? 'Collapse folder' : 'Expand folder'}
-              >
-                <span className={`spending-expand-caret ${isExpanded ? 'expanded' : ''}`}>&#9656;</span>
-              </button>
-              <span
-                className={`category-color-dot ${node.color ? '' : 'none'}`}
-                style={node.color ? { backgroundColor: node.color } : undefined}
-                aria-hidden="true"
-              />
-              <span className="category-tree-name">{node.name}</span>
-              {directWorkbooks.length > 0 && (
-                <span className="category-tree-count-badge">{directWorkbooks.length}</span>
-              )}
-              {node.limit != null && (
-                <span className="category-limit-badge">Limit: {formatWithCommas(node.limit)}</span>
-              )}
-            </div>
-            <ActionMenu
-              label={`Actions for ${node.name}`}
-              items={[
-                canAddChild && {
-                  key: 'add-child',
-                  label: '+ Add Child',
-                  onClick: () => setIsAddingChild(prev => !prev)
-                },
-                {
-                  key: 'color',
-                  label: 'Set Color',
-                  onClick: () => setIsPickingColor(prev => !prev)
-                },
-                {
-                  key: 'limit',
-                  label: node.limit != null ? 'Edit Limit' : 'Set Limit',
-                  onClick: () => setIsSettingLimit(prev => !prev)
-                },
-                {
-                  key: 'edit',
-                  label: 'Edit',
-                  onClick: () => setIsEditing(true)
-                },
-                {
-                  key: 'delete',
-                  label: 'Delete',
-                  danger: true,
-                  onClick: handleDelete
-                }
-              ]}
-            />
-          </>
-        )}
+          )}
+          <span className="category-tree-name">{name}</span>
+          {entries.length > 0 && (
+            <span className="category-tree-count-badge">{entries.length}</span>
+          )}
+        </div>
       </div>
 
-      {isPickingColor && (
-        <div className="category-color-picker-row" style={{ marginLeft: `${(depth + 1) * 1.25}rem` }}>
-          <ColorSwatchPicker
-            value={node.color || null}
-            onChange={(color) => onSetColor(node.id, color)}
-            onClose={() => setIsPickingColor(false)}
-          />
-        </div>
-      )}
-
-      {isSettingLimit && (
-        <div className="category-limit-editor-row" style={{ marginLeft: `${(depth + 1) * 1.25}rem` }}>
-          <CategoryLimitEditor
-            value={node.limit ?? null}
-            onChange={(limit) => onSetLimit(node.id, limit)}
-            onClose={() => setIsSettingLimit(false)}
-          />
-        </div>
-      )}
-
-      {isAddingChild && (
-        <div className="category-add-inline category-tree-add-child" style={{ marginLeft: `${(depth + 1) * 1.25}rem` }}>
-          <input
-            type="text"
-            value={newChildName}
-            onChange={(e) => setNewChildName(e.target.value)}
-            placeholder="New subcategory name"
-            className="dialog-input"
-            autoFocus
-            onKeyDown={(e) => { if (e.key === 'Enter') handleConfirmAddChild(); }}
-          />
-          <button type="button" className="category-add-button" onClick={handleConfirmAddChild}>Add</button>
-          <button
-            type="button"
-            className="category-cancel-button"
-            onClick={() => { setIsAddingChild(false); setNewChildName(''); }}
-          >
-            Cancel
-          </button>
-        </div>
-      )}
-
-      {isExpanded && (
-        <>
-          {directWorkbooks.length > 0 && (
-            <ul className="category-tree-workbook-list" style={{ marginLeft: `${(depth + 1) * 1.25}rem` }}>
-              {directWorkbooks.map(wb => (
-                <WorkbookRow
-                  key={wb.id}
-                  workbook={wb}
-                  moveOptions={moveOptions}
-                  onMoveWorkbook={onMoveWorkbook}
-                  onQuickView={onQuickView}
-                />
-              ))}
-            </ul>
-          )}
-
-          {children.length > 0 && (
-            <ul className="category-tree-children">
-              {children.map(child => (
-                <CategoryTreeNode
-                  key={child.id}
-                  node={child}
-                  depth={depth + 1}
-                  categories={categories}
-                  workbooks={workbooks}
-                  workbooksByCategory={workbooksByCategory}
-                  moveOptions={moveOptions}
-                  expandedIds={expandedIds}
-                  onToggleExpand={onToggleExpand}
-                  dragOverId={dragOverId}
-                  onDragOverNode={onDragOverNode}
-                  onDragLeaveNode={onDragLeaveNode}
-                  onDropOnNode={onDropOnNode}
-                  onAddCategory={onAddCategory}
-                  onRenameCategory={onRenameCategory}
-                  onDeleteCategory={onDeleteCategory}
-                  onSetColor={onSetColor}
-                  onSetLimit={onSetLimit}
-                  onMoveWorkbook={onMoveWorkbook}
-                  onQuickView={onQuickView}
-                  formatWithCommas={formatWithCommas}
-                />
-              ))}
-            </ul>
-          )}
-        </>
+      {isExpanded && entries.length > 0 && (
+        <ul className="category-tree-workbook-list" style={{ marginLeft: '1.25rem' }}>
+          {entries.map(({ workbook, categoryName }) => (
+            <GroupedWorkbookRow
+              key={workbook.id}
+              workbook={workbook}
+              categoryName={categoryName}
+              groupName={name}
+              onQuickView={onQuickView}
+            />
+          ))}
+        </ul>
       )}
     </li>
   );
@@ -308,13 +94,25 @@ function CategoryTreeNode({
 /**
  * CategoryManagerDialog Component
  *
- * A folder browser for the expense category tree, opened as a large
- * right-docked panel for room to work: add root categories, add child
- * categories up to MAX_DEPTH levels down, rename or delete any node
- * (cascading to descendants and un-categorizing any workbook that
- * referenced them), and browse the workbooks filed under each folder -
- * moving one to a different category either via its "Move to" select or by
- * dragging it onto another folder.
+ * A read-only, aggregated browser across the whole category "namespace".
+ *
+ * Budgets keep their spending fully isolated from one another (see
+ * useCategories.cloneCategoriesAsEmpty): picking an existing category name
+ * for a new budget clones it into a brand-new id rather than linking to the
+ * original, so the same name (e.g. "Groceries") can end up as many
+ * different underlying category records - one per budget that used it.
+ * That's correct for scoping spend, but it means the raw category list can
+ * have any number of same-named entries once there are many budgets.
+ *
+ * This panel groups all of those by name instead of listing every
+ * duplicate, so browsing stays sane regardless of how many budgets reuse a
+ * given name: one row per distinct name, aggregating every workbook filed
+ * under it (or any of its subcategories, at any depth, in any budget's
+ * copy) into a single flat list. Because a grouped row can represent many
+ * different underlying ids at once, there's no unambiguous single target
+ * for renaming, deleting, recoloring, limiting, or reassigning a workbook
+ * from here - those stay scoped to a specific budget's own category tree
+ * (Budget Details) or a workbook's own "Add to Budget / Category" action.
  */
 function CategoryManagerDialog({
   isVisible,
@@ -322,58 +120,80 @@ function CategoryManagerDialog({
   categories,
   workbooks,
   onAddCategory,
-  onRenameCategory,
-  onDeleteCategory,
-  onSetCategoryColor,
-  onSetCategoryLimit,
-  onMoveWorkbook,
   onOpenWorkbook,
   formatWithCommas
 }) {
   const [newRootName, setNewRootName] = useState('');
-  const [expandedIds, setExpandedIds] = useState(() => new Set());
-  const [dragOverId, setDragOverId] = useState(null);
+  const [expandedKeys, setExpandedKeys] = useState(() => new Set());
   const [quickViewWorkbook, setQuickViewWorkbook] = useState(null);
 
-  const rootCategories = getChildren(categories, null);
+  const byId = useMemo(() => new Map(categories.map(c => [c.id, c])), [categories]);
 
-  // Only recompute these when categories/workbooks actually change, not on
-  // every render this (always-mounted, for the slide animation) panel
-  // happens to pick up from unrelated state elsewhere.
-  const moveOptions = useMemo(() => flattenTree(categories), [categories]);
-  const workbooksByCategory = useMemo(() => {
-    const map = new Map();
-    workbooks.forEach(wb => {
-      const key = wb.categoryId || null;
-      if (!map.has(key)) map.set(key, []);
-      map.get(key).push(wb);
+  // Resolve every category id to the name of its top-level ancestor
+  // (itself, if it's already a root) - memoized per id so a deep chain
+  // isn't re-walked for every descendant that shares it.
+  const rootNameById = useMemo(() => {
+    const resolved = new Map();
+    const resolve = (id) => {
+      if (resolved.has(id)) return resolved.get(id);
+      const cat = byId.get(id);
+      if (!cat) return null;
+      const name = cat.parentId ? resolve(cat.parentId) : cat.name.trim();
+      resolved.set(id, name);
+      return name;
+    };
+    categories.forEach(c => resolve(c.id));
+    return resolved;
+  }, [categories, byId]);
+
+  const groups = useMemo(() => {
+    const order = [];
+    const byName = new Map();
+
+    const getGroup = (name) => {
+      const key = name.trim().toLowerCase();
+      if (!byName.has(key)) {
+        byName.set(key, { name: name.trim(), color: null, entries: [] });
+        order.push(key);
+      }
+      return byName.get(key);
+    };
+
+    // Seed a row for every root category even if it has no workbooks yet,
+    // and pick up the first color set on any instance of that name.
+    categories.filter(c => !c.parentId).forEach(c => {
+      const group = getGroup(c.name);
+      if (!group.color && c.color) group.color = c.color;
     });
-    return map;
+
+    workbooks.forEach(wb => {
+      if (!wb.categoryId) return;
+      const rootName = rootNameById.get(wb.categoryId);
+      if (!rootName) return;
+      const ownCategory = byId.get(wb.categoryId);
+      getGroup(rootName).entries.push({ workbook: wb, categoryName: ownCategory ? ownCategory.name : null });
+    });
+
+    order.forEach(key => {
+      byName.get(key).entries.sort((a, b) => new Date(b.workbook.date) - new Date(a.workbook.date));
+    });
+
+    return order.map(key => byName.get(key));
+  }, [categories, workbooks, rootNameById, byId]);
+
+  const uncategorizedEntries = useMemo(() => {
+    return workbooks
+      .filter(wb => !wb.categoryId)
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .map(wb => ({ workbook: wb, categoryName: null }));
   }, [workbooks]);
 
-  const uncategorizedWorkbooks = workbooksByCategory.get(null) || [];
-  const isUncategorizedExpanded = expandedIds.has(UNCATEGORIZED_ID);
-  const isUncategorizedDragOver = dragOverId === UNCATEGORIZED_ID;
-
-  const toggleExpand = (id) => {
-    setExpandedIds(prev => {
+  const toggleExpand = (key) => {
+    setExpandedKeys(prev => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(key)) next.delete(key); else next.add(key);
       return next;
     });
-  };
-
-  const handleDragOverNode = (id) => setDragOverId(id);
-  const handleDragLeaveNode = (id) => setDragOverId(prev => (prev === id ? null : prev));
-  const handleDropOnNode = (id, e) => {
-    // Read the dragged workbook id straight off the drop event rather than
-    // from state set during dragstart - state updates from that earlier
-    // event may not have flushed yet by the time drop fires.
-    const workbookId = e.dataTransfer.getData('text/plain');
-    if (workbookId) {
-      onMoveWorkbook(workbookId, id === UNCATEGORIZED_ID ? null : id);
-    }
-    setDragOverId(null);
   };
 
   const handleAddRoot = () => {
@@ -403,76 +223,38 @@ function CategoryManagerDialog({
       </div>
 
       <div className="spending-summary-panel-body">
-        {uncategorizedWorkbooks.length > 0 && (
+        {uncategorizedEntries.length > 0 && (
           <ul className="category-tree-children category-tree-root">
-            <li className="category-tree-item">
-              <div
-                className={`category-tree-row ${isUncategorizedDragOver ? 'drag-over' : ''}`}
-                onDragOver={(e) => { e.preventDefault(); handleDragOverNode(UNCATEGORIZED_ID); }}
-                onDragLeave={() => handleDragLeaveNode(UNCATEGORIZED_ID)}
-                onDrop={(e) => { e.preventDefault(); handleDropOnNode(UNCATEGORIZED_ID, e); }}
-              >
-                <div className="category-tree-name-group">
-                  <button
-                    type="button"
-                    className="category-tree-expand-button"
-                    onClick={() => toggleExpand(UNCATEGORIZED_ID)}
-                    aria-expanded={isUncategorizedExpanded}
-                    aria-label={isUncategorizedExpanded ? 'Collapse folder' : 'Expand folder'}
-                  >
-                    <span className={`spending-expand-caret ${isUncategorizedExpanded ? 'expanded' : ''}`}>&#9656;</span>
-                  </button>
-                  <span className="category-tree-name">Uncategorized</span>
-                  <span className="category-tree-count-badge">{uncategorizedWorkbooks.length}</span>
-                </div>
-              </div>
-              {isUncategorizedExpanded && (
-                <ul className="category-tree-workbook-list" style={{ marginLeft: '1.25rem' }}>
-                  {uncategorizedWorkbooks.map(wb => (
-                    <WorkbookRow
-                      key={wb.id}
-                      workbook={wb}
-                      moveOptions={moveOptions}
-                      onMoveWorkbook={onMoveWorkbook}
-                      onQuickView={setQuickViewWorkbook}
-                    />
-                  ))}
-                </ul>
-              )}
-            </li>
+            <CategoryGroupRow
+              name="Uncategorized"
+              color={undefined}
+              entries={uncategorizedEntries}
+              isExpanded={expandedKeys.has(UNCATEGORIZED_KEY)}
+              onToggle={() => toggleExpand(UNCATEGORIZED_KEY)}
+              onQuickView={setQuickViewWorkbook}
+            />
           </ul>
         )}
 
-        {rootCategories.length > 0 ? (
+        {groups.length > 0 ? (
           <ul className="category-tree-children category-tree-root">
-            {rootCategories.map(node => (
-              <CategoryTreeNode
-                key={node.id}
-                node={node}
-                depth={0}
-                categories={categories}
-                workbooks={workbooks}
-                workbooksByCategory={workbooksByCategory}
-                moveOptions={moveOptions}
-                expandedIds={expandedIds}
-                onToggleExpand={toggleExpand}
-                dragOverId={dragOverId}
-                onDragOverNode={handleDragOverNode}
-                onDragLeaveNode={handleDragLeaveNode}
-                onDropOnNode={handleDropOnNode}
-                onAddCategory={onAddCategory}
-                onRenameCategory={onRenameCategory}
-                onSetColor={onSetCategoryColor}
-                onSetLimit={onSetCategoryLimit}
-                onQuickView={setQuickViewWorkbook}
-                onDeleteCategory={onDeleteCategory}
-                onMoveWorkbook={onMoveWorkbook}
-                formatWithCommas={formatWithCommas}
-              />
-            ))}
+            {groups.map(group => {
+              const key = group.name.toLowerCase();
+              return (
+                <CategoryGroupRow
+                  key={key}
+                  name={group.name}
+                  color={group.color}
+                  entries={group.entries}
+                  isExpanded={expandedKeys.has(key)}
+                  onToggle={() => toggleExpand(key)}
+                  onQuickView={setQuickViewWorkbook}
+                />
+              );
+            })}
           </ul>
         ) : (
-          uncategorizedWorkbooks.length === 0 && (
+          uncategorizedEntries.length === 0 && (
             <p className="no-spending-data">No categories yet. Add your first one below.</p>
           )
         )}
@@ -516,6 +298,7 @@ const workbookShape = PropTypes.shape({
   id: PropTypes.string.isRequired,
   name: PropTypes.string,
   content: PropTypes.string,
+  date: PropTypes.string,
   displayDate: PropTypes.string,
   categoryId: PropTypes.string,
   isPaid: PropTypes.bool,
@@ -523,38 +306,23 @@ const workbookShape = PropTypes.shape({
   paidAtDisplay: PropTypes.string
 });
 
-WorkbookRow.propTypes = {
+GroupedWorkbookRow.propTypes = {
   workbook: workbookShape.isRequired,
-  moveOptions: PropTypes.arrayOf(PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    name: PropTypes.string.isRequired,
-    depth: PropTypes.number.isRequired
-  })).isRequired,
-  onMoveWorkbook: PropTypes.func.isRequired,
+  categoryName: PropTypes.string,
+  groupName: PropTypes.string.isRequired,
   onQuickView: PropTypes.func.isRequired
 };
 
-CategoryTreeNode.propTypes = {
-  node: categoryShape.isRequired,
-  depth: PropTypes.number.isRequired,
-  categories: PropTypes.arrayOf(categoryShape).isRequired,
-  workbooks: PropTypes.arrayOf(workbookShape).isRequired,
-  workbooksByCategory: PropTypes.instanceOf(Map).isRequired,
-  moveOptions: PropTypes.array.isRequired,
-  expandedIds: PropTypes.instanceOf(Set).isRequired,
-  onToggleExpand: PropTypes.func.isRequired,
-  dragOverId: PropTypes.string,
-  onDragOverNode: PropTypes.func.isRequired,
-  onDragLeaveNode: PropTypes.func.isRequired,
-  onDropOnNode: PropTypes.func.isRequired,
-  onAddCategory: PropTypes.func.isRequired,
-  onRenameCategory: PropTypes.func.isRequired,
-  onDeleteCategory: PropTypes.func.isRequired,
-  onSetColor: PropTypes.func.isRequired,
-  onSetLimit: PropTypes.func.isRequired,
-  onMoveWorkbook: PropTypes.func.isRequired,
-  onQuickView: PropTypes.func.isRequired,
-  formatWithCommas: PropTypes.func.isRequired
+CategoryGroupRow.propTypes = {
+  name: PropTypes.string.isRequired,
+  color: PropTypes.string,
+  entries: PropTypes.arrayOf(PropTypes.shape({
+    workbook: workbookShape.isRequired,
+    categoryName: PropTypes.string
+  })).isRequired,
+  isExpanded: PropTypes.bool.isRequired,
+  onToggle: PropTypes.func.isRequired,
+  onQuickView: PropTypes.func.isRequired
 };
 
 CategoryManagerDialog.propTypes = {
@@ -563,11 +331,6 @@ CategoryManagerDialog.propTypes = {
   categories: PropTypes.arrayOf(categoryShape).isRequired,
   workbooks: PropTypes.arrayOf(workbookShape).isRequired,
   onAddCategory: PropTypes.func.isRequired,
-  onRenameCategory: PropTypes.func.isRequired,
-  onDeleteCategory: PropTypes.func.isRequired,
-  onSetCategoryColor: PropTypes.func.isRequired,
-  onSetCategoryLimit: PropTypes.func.isRequired,
-  onMoveWorkbook: PropTypes.func.isRequired,
   onOpenWorkbook: PropTypes.func.isRequired,
   formatWithCommas: PropTypes.func.isRequired
 };

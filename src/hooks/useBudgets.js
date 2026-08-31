@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getDescendantIds } from './useCategories';
 import { isWithinRange } from '../utils/dateRange';
-import { computeWorkbookTotal } from '../utils/workbookTotal';
+import { getPaymentStatus } from '../utils/workbookTotal';
 
 const STORAGE_KEY = 'humanCalculatorBudgets';
 
@@ -114,30 +114,33 @@ const isWorkbookInBudgetScope = (wb, budget, scopeIds) => {
  */
 export const computeBudgetSpent = (budget, workbooks, categories) => {
   const scopeIds = getBudgetScopeIds(budget, categories);
+  const inScope = (workbooks || [])
+    .filter(wb => isWorkbookInBudgetScope(wb, budget, scopeIds))
+    .map(wb => ({ wb, ...getPaymentStatus(wb) }));
 
-  const paidMatched = (workbooks || []).filter(wb =>
-    wb.isPaid &&
-    isWithinRange(wb.paidAt, budget.period, budget.customFrom, budget.customTo) &&
-    isWorkbookInBudgetScope(wb, budget, scopeIds)
+  // A partially-paid workbook counts toward both at once: whatever's been
+  // paid so far (if that payment falls in the period) counts as spent, and
+  // whatever's still owed on it counts as pending - so it isn't forced into
+  // an all-or-nothing bucket the way a plain paid/unpaid flag would.
+  const paidMatched = inScope.filter(({ paid, wb }) =>
+    paid > 0 && isWithinRange(wb.paidAt, budget.period, budget.customFrom, budget.customTo)
   );
 
-  // Unpaid items aren't tied to the period (they have no paid date yet) -
-  // "pending" is everything currently unpaid and in scope, regardless of
-  // when it might eventually be paid.
-  const unpaidMatched = (workbooks || []).filter(wb =>
-    !wb.isPaid && isWorkbookInBudgetScope(wb, budget, scopeIds)
-  );
+  // Anything not yet fully paid isn't tied to the period (there's no single
+  // "paid date" for an outstanding balance) - "pending" is everything
+  // currently owed and in scope, regardless of when it might be paid.
+  const pendingMatched = inScope.filter(({ status }) => status !== 'paid');
 
-  const spent = paidMatched.reduce((sum, wb) => sum + (wb.amountPaid || 0), 0);
-  const pending = unpaidMatched.reduce((sum, wb) => sum + computeWorkbookTotal(wb.content), 0);
+  const spent = paidMatched.reduce((sum, { paid }) => sum + paid, 0);
+  const pending = pendingMatched.reduce((sum, { remaining }) => sum + remaining, 0);
 
   return {
     spent,
     count: paidMatched.length,
-    workbooks: paidMatched,
+    workbooks: paidMatched.map(({ wb }) => wb),
     pending,
-    pendingCount: unpaidMatched.length,
-    pendingWorkbooks: unpaidMatched,
+    pendingCount: pendingMatched.length,
+    pendingWorkbooks: pendingMatched.map(({ wb }) => wb),
     availableBalance: budget.amount - spent - pending
   };
 };

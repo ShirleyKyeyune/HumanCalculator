@@ -176,6 +176,13 @@ function useCategories() {
    *
    * Batches every clone into a single persist so cloning several at once
    * (from one form submit) doesn't drop any of them to a stale closure.
+   *
+   * Only name, color and tree position carry over - they're the reusable
+   * "template" part of a category (so a budget's creator doesn't have to
+   * retype a folder structure that already exists elsewhere). A budget
+   * limit is inherently budget-specific, though: Budget A's $500 grocery
+   * cap has no bearing on what Budget B wants, so every clone always
+   * starts with no limit, regardless of what the original had set.
    * @returns {Object} mapping of original id -> new cloned id (includes
    *   ancestors pulled in along the way, not just the ids passed in)
    */
@@ -199,7 +206,7 @@ function useCategories() {
         name: source.name,
         parentId: newParentId,
         color: source.color || null,
-        limit: source.limit ?? null
+        limit: null
       });
       mapping[id] = newId;
       return newId;

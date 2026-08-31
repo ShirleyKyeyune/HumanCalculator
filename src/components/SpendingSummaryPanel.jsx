@@ -34,7 +34,7 @@ function SpendingCategoryNode({
     <li className="spending-category-item" style={depth > 0 ? { marginLeft: '0.5rem' } : undefined}>
       <button
         type="button"
-        className="spending-category-header"
+        className={`spending-category-header ${isExpanded ? 'expanded' : ''}`}
         onClick={() => onToggle(node.id)}
         aria-expanded={isExpanded}
       >
@@ -133,8 +133,10 @@ function SpendingSummaryPanel({ isVisible, onClose, workbooks, categories, onOpe
 
   const categoryFilterOptions = useMemo(() => flattenTree(categories), [categories]);
 
+  // Includes partially-paid workbooks too - a workbook doesn't need to be
+  // fully settled for the amount actually paid on it to count as spend.
   const periodPaid = useMemo(
-    () => (workbooks || []).filter(wb => wb.isPaid && isWithinRange(wb.paidAt, range, customFrom, customTo)),
+    () => (workbooks || []).filter(wb => (wb.amountPaid || 0) > 0 && isWithinRange(wb.paidAt, range, customFrom, customTo)),
     [workbooks, range, customFrom, customTo]
   );
 

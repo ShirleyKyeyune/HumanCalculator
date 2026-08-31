@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import PropTypes from 'prop-types';
-import { computeWorkbookTotal } from '../utils/workbookTotal';
+import { getPaymentStatus } from '../utils/workbookTotal';
 
 /**
  * A read-only preview of a workbook's content, layered on top of whichever
@@ -27,7 +27,7 @@ function WorkbookQuickView({ workbook, formatWithCommas, onClose, onOpenFull }) 
     };
   }, [onClose]);
 
-  const total = useMemo(() => computeWorkbookTotal(workbook.content), [workbook.content]);
+  const { paid, remaining, status } = useMemo(() => getPaymentStatus(workbook), [workbook]);
 
   return (
     <div className="workbook-quick-view-layer">
@@ -45,11 +45,15 @@ function WorkbookQuickView({ workbook, formatWithCommas, onClose, onOpenFull }) 
         </div>
         <div className="workbook-quick-view-meta">
           <span>{workbook.paidAtDisplay || workbook.displayDate}</span>
-          {workbook.isPaid ? (
-            <span className="workbook-paid-badge paid">{formatWithCommas(workbook.amountPaid || 0)}</span>
+          {status === 'paid' ? (
+            <span className="workbook-paid-badge paid">{formatWithCommas(paid)}</span>
+          ) : status === 'partial' ? (
+            <span className="workbook-paid-badge partial">
+              Partial &middot; {formatWithCommas(paid)} of {formatWithCommas(paid + remaining)}
+            </span>
           ) : (
             <span className="workbook-paid-badge unpaid">
-              Unpaid &middot; {formatWithCommas(total)}
+              Unpaid &middot; {formatWithCommas(remaining)}
             </span>
           )}
         </div>

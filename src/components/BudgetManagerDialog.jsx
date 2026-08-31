@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { flattenTree, getChildren, getDescendantIds, getDepth, MAX_DEPTH } from '../hooks/useCategories';
 import { computeBudgetSpent } from '../hooks/useBudgets';
-import { computeWorkbookTotal } from '../utils/workbookTotal';
+import { getPaymentStatus } from '../utils/workbookTotal';
 import AmountInput from './AmountInput';
 import ActionMenu from './ActionMenu';
 import ColorSwatchPicker from './ColorSwatchPicker';
@@ -121,9 +121,11 @@ function BudgetCategoryNode({
   onSetWorkbookCategory,
   onSetCategoryColor,
   onSetCategoryLimit,
+  onRenameCategory,
   onUpdateBudget,
   onCreateWorkbook,
   onQuickView,
+  onMarkPaid,
   formatWithCommas
 }) {
   const [isAddingChild, setIsAddingChild] = useState(false);
@@ -131,6 +133,8 @@ function BudgetCategoryNode({
   const [isAddingWorkbook, setIsAddingWorkbook] = useState(false);
   const [isPickingColor, setIsPickingColor] = useState(false);
   const [isSettingLimit, setIsSettingLimit] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editName, setEditName] = useState(node.name);
 
   const isExpanded = expandedIds.has(node.id);
   const isUncategorized = node.id === UNCATEGORIZED_ID;
@@ -145,6 +149,16 @@ function BudgetCategoryNode({
     }
     setNewChildName('');
     setIsAddingChild(false);
+  };
+
+  // Renaming here only ever touches this budget's own copy of the category
+  // (see useCategories.cloneCategoriesAsEmpty) - it can never affect any
+  // other budget's folder, even one that started out with the same name.
+  const handleSaveRename = () => {
+    if (editName.trim()) {
+      onRenameCategory(node.id, editName);
+    }
+    setIsEditingName(false);
   };
 
   const handleDeleteFolder = () => {
@@ -187,62 +201,90 @@ function BudgetCategoryNode({
 
   return (
     <li className="spending-category-item" style={depth > 0 ? { marginLeft: '0.5rem' } : undefined}>
-      <div className="budget-category-header-row">
-        <button
-          type="button"
-          className="spending-category-header"
-          onClick={() => onToggle(node.id)}
-          aria-expanded={isExpanded}
-        >
-          <span className="spending-category-name">
-            <span className={`spending-expand-caret ${isExpanded ? 'expanded' : ''}`}>&#9656;</span>
-            {!isUncategorized && (
-              <span
-                className={`category-color-dot ${node.color ? '' : 'none'}`}
-                style={node.color ? { backgroundColor: node.color } : undefined}
-                aria-hidden="true"
-              />
-            )}
-            {node.name}
-          </span>
-          <span className="budget-node-totals">
-            <span className="budget-node-paid-total">{formatWithCommas(node.paidTotal)} paid</span>
-            {node.unpaidTotal > 0 && (
-              <span className="budget-node-pending-total">{formatWithCommas(node.unpaidTotal)} pending</span>
-            )}
-          </span>
-        </button>
-        <ActionMenu
-          label={`Actions for ${node.name}`}
-          items={[
-            canAddChild && {
-              key: 'add-child',
-              label: '+ Add Child',
-              onClick: () => { setIsAddingChild(v => !v); setIsAddingWorkbook(false); }
-            },
-            {
-              key: 'add-workbook',
-              label: '+ Add Workbook',
-              onClick: () => { setIsAddingWorkbook(v => !v); setIsAddingChild(false); }
-            },
-            !isUncategorized && {
-              key: 'color',
-              label: 'Set Color',
-              onClick: () => setIsPickingColor(v => !v)
-            },
-            !isUncategorized && {
-              key: 'limit',
-              label: node.limit != null ? 'Edit Limit' : 'Set Limit',
-              onClick: () => setIsSettingLimit(v => !v)
-            },
-            !isUncategorized && {
-              key: 'delete',
-              label: 'Delete',
-              danger: true,
-              onClick: handleDeleteFolder
-            }
-          ]}
-        />
+      <div className={`budget-category-header-row ${isExpanded ? 'expanded' : ''}`}>
+        {isEditingName ? (
+          <div className="category-tree-edit-row">
+            <input
+              type="text"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              className="dialog-input"
+              autoFocus
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSaveRename(); }}
+            />
+            <button type="button" className="category-add-button" onClick={handleSaveRename}>Save</button>
+            <button
+              type="button"
+              className="category-cancel-button"
+              onClick={() => { setIsEditingName(false); setEditName(node.name); }}
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <>
+            <button
+              type="button"
+              className="spending-category-header"
+              onClick={() => onToggle(node.id)}
+              aria-expanded={isExpanded}
+            >
+              <span className="spending-category-name">
+                <span className={`spending-expand-caret ${isExpanded ? 'expanded' : ''}`}>&#9656;</span>
+                {!isUncategorized && (
+                  <span
+                    className={`category-color-dot ${node.color ? '' : 'none'}`}
+                    style={node.color ? { backgroundColor: node.color } : undefined}
+                    aria-hidden="true"
+                  />
+                )}
+                {node.name}
+              </span>
+              <span className="budget-node-totals">
+                <span className="budget-node-paid-total">{formatWithCommas(node.paidTotal)} paid</span>
+                {node.unpaidTotal > 0 && (
+                  <span className="budget-node-pending-total">{formatWithCommas(node.unpaidTotal)} pending</span>
+                )}
+              </span>
+            </button>
+            <ActionMenu
+              label={`Actions for ${node.name}`}
+              items={[
+                canAddChild && {
+                  key: 'add-child',
+                  label: '+ Add Child',
+                  onClick: () => { setIsAddingChild(v => !v); setIsAddingWorkbook(false); }
+                },
+                {
+                  key: 'add-workbook',
+                  label: '+ Add Workbook',
+                  onClick: () => { setIsAddingWorkbook(v => !v); setIsAddingChild(false); }
+                },
+                !isUncategorized && {
+                  key: 'color',
+                  label: 'Set Color',
+                  onClick: () => setIsPickingColor(v => !v)
+                },
+                !isUncategorized && {
+                  key: 'limit',
+                  label: node.limit != null ? 'Edit Limit' : 'Set Limit',
+                  onClick: () => setIsSettingLimit(v => !v)
+                },
+                !isUncategorized && {
+                  key: 'rename',
+                  label: 'Rename',
+                  onClick: () => { setEditName(node.name); setIsEditingName(true); }
+                },
+                !isUncategorized && {
+                  key: 'delete',
+                  label: 'Delete',
+                  danger: true,
+                  onClick: handleDeleteFolder
+                }
+              ]}
+            />
+          </>
+        )}
       </div>
       <div className="spending-category-meta">
         <span>{node.paidCount} paid · {node.unpaidCount} unpaid</span>
@@ -319,31 +361,50 @@ function BudgetCategoryNode({
         <div className="spending-subcategory-groups">
           {node.directItems.length > 0 && (
             <ul className="spending-workbook-list">
-              {node.directItems.map(wb => (
-                <li key={wb.id} className="spending-workbook-row">
+              {node.directItems.map(wb => {
+                const { paid, remaining, status } = getPaymentStatus(wb);
+                return (
+                <li
+                  key={wb.id}
+                  className="spending-workbook-row clickable"
+                  onClick={() => onQuickView(wb)}
+                >
                   <div className="spending-workbook-info">
                     <span className="spending-workbook-name">{wb.name}</span>
                     <span className="spending-workbook-date">{wb.paidAtDisplay || wb.displayDate}</span>
                   </div>
-                  {wb.isPaid ? (
-                    <span className="workbook-paid-badge paid">{formatWithCommas(wb.amountPaid || 0)}</span>
+                  {status === 'paid' ? (
+                    <span className="workbook-paid-badge paid">{formatWithCommas(paid)}</span>
+                  ) : status === 'partial' ? (
+                    <span className="workbook-paid-badge partial">
+                      Partial &middot; {formatWithCommas(paid)} of {formatWithCommas(paid + remaining)}
+                    </span>
                   ) : (
                     <span className="workbook-paid-badge unpaid">
-                      Unpaid &middot; {formatWithCommas(computeWorkbookTotal(wb.content))}
+                      Unpaid &middot; {formatWithCommas(remaining)}
                     </span>
                   )}
+                  <button
+                    type="button"
+                    className="workbook-quick-view-trigger"
+                    onClick={(e) => { e.stopPropagation(); onQuickView(wb); }}
+                    title="Quick view"
+                    aria-label={`Quick view ${wb.name}`}
+                  >
+                    &#128065;
+                  </button>
                   <ActionMenu
                     label={`Actions for ${wb.name}`}
                     items={[
                       {
-                        key: 'quick-view',
-                        label: 'Quick View',
-                        onClick: () => onQuickView(wb)
-                      },
-                      {
                         key: 'open',
                         label: 'Open',
                         onClick: () => onOpenWorkbook(wb)
+                      },
+                      {
+                        key: 'mark-paid',
+                        label: status === 'paid' ? 'Edit Payment' : status === 'partial' ? 'Record Payment' : 'Mark as Paid',
+                        onClick: () => onMarkPaid(wb)
                       },
                       !isUncategorized && {
                         key: 'untag',
@@ -359,7 +420,8 @@ function BudgetCategoryNode({
                     ]}
                   />
                 </li>
-              ))}
+                );
+              })}
             </ul>
           )}
           {node.children.length > 0 && (
@@ -380,9 +442,11 @@ function BudgetCategoryNode({
                   onSetWorkbookCategory={onSetWorkbookCategory}
                   onSetCategoryColor={onSetCategoryColor}
                   onSetCategoryLimit={onSetCategoryLimit}
+                  onRenameCategory={onRenameCategory}
                   onUpdateBudget={onUpdateBudget}
                   onCreateWorkbook={onCreateWorkbook}
                   onQuickView={onQuickView}
+                  onMarkPaid={onMarkPaid}
                   formatWithCommas={formatWithCommas}
                 />
               ))}
@@ -410,8 +474,10 @@ function BudgetDetail({
   onSetWorkbookCategory,
   onSetCategoryColor,
   onSetCategoryLimit,
+  onRenameCategory,
   onUpdateBudget,
   onCreateWorkbook,
+  onMarkPaid,
   formatWithCommas
 }) {
   const [expandedIds, setExpandedIds] = useState(() => new Set());
@@ -440,8 +506,12 @@ function BudgetDetail({
       const directItems = matchedWorkbooks
         .filter(wb => (wb.categoryId || null) === nodeId)
         .sort((a, b) => new Date(b.paidAt || b.date) - new Date(a.paidAt || a.date));
-      const paidItems = directItems.filter(wb => wb.isPaid);
-      const unpaidItems = directItems.filter(wb => !wb.isPaid);
+      // A partially-paid workbook contributes to both totals at once: its
+      // paid-so-far amount counts toward paidTotal, and whatever's still
+      // owed on it counts toward unpaidTotal - so it shows up correctly in
+      // both rather than being bucketed as all-or-nothing.
+      const statuses = directItems.map(wb => getPaymentStatus(wb));
+      const unpaidItems = directItems.filter((wb, i) => statuses[i].status !== 'paid');
 
       // Show the full subtree under a tracked category, even the empty
       // parts - otherwise a freshly-created (still empty) subfolder would
@@ -449,11 +519,11 @@ function BudgetDetail({
       const children = getChildren(categories, nodeId)
         .map(child => buildNode(child.id, child.name, child.color, child.limit));
 
-      const paidTotal = paidItems.reduce((sum, wb) => sum + (wb.amountPaid || 0), 0) +
+      const paidTotal = statuses.reduce((sum, s) => sum + s.paid, 0) +
         children.reduce((sum, c) => sum + c.paidTotal, 0);
-      const unpaidTotal = unpaidItems.reduce((sum, wb) => sum + computeWorkbookTotal(wb.content), 0) +
+      const unpaidTotal = statuses.reduce((sum, s) => sum + s.remaining, 0) +
         children.reduce((sum, c) => sum + c.unpaidTotal, 0);
-      const paidCountNode = paidItems.length + children.reduce((sum, c) => sum + c.paidCount, 0);
+      const paidCountNode = statuses.filter(s => s.paid > 0).length + children.reduce((sum, c) => sum + c.paidCount, 0);
       const unpaidCountNode = unpaidItems.length + children.reduce((sum, c) => sum + c.unpaidCount, 0);
       const itemCount = directItems.length + children.reduce((sum, c) => sum + c.itemCount, 0);
 
@@ -497,8 +567,7 @@ function BudgetDetail({
       .filter(wb => !wb.categoryId)
       .sort((a, b) => new Date(b.paidAt || b.date) - new Date(a.paidAt || a.date));
     if (uncategorizedItems.length > 0) {
-      const paidItems = uncategorizedItems.filter(wb => wb.isPaid);
-      const unpaidItems = uncategorizedItems.filter(wb => !wb.isPaid);
+      const uncategorizedStatuses = uncategorizedItems.map(wb => getPaymentStatus(wb));
       categoryRoots.push({
         id: UNCATEGORIZED_ID,
         name: 'Uncategorized',
@@ -506,10 +575,10 @@ function BudgetDetail({
         limit: null,
         directItems: uncategorizedItems,
         children: [],
-        paidTotal: paidItems.reduce((sum, wb) => sum + (wb.amountPaid || 0), 0),
-        unpaidTotal: unpaidItems.reduce((sum, wb) => sum + computeWorkbookTotal(wb.content), 0),
-        paidCount: paidItems.length,
-        unpaidCount: unpaidItems.length,
+        paidTotal: uncategorizedStatuses.reduce((sum, s) => sum + s.paid, 0),
+        unpaidTotal: uncategorizedStatuses.reduce((sum, s) => sum + s.remaining, 0),
+        paidCount: uncategorizedStatuses.filter(s => s.paid > 0).length,
+        unpaidCount: uncategorizedItems.filter((wb, i) => uncategorizedStatuses[i].status !== 'paid').length,
         itemCount: uncategorizedItems.length
       });
     }
@@ -649,9 +718,11 @@ function BudgetDetail({
                 onSetWorkbookCategory={onSetWorkbookCategory}
                 onSetCategoryColor={onSetCategoryColor}
                 onSetCategoryLimit={onSetCategoryLimit}
+                onRenameCategory={onRenameCategory}
                 onUpdateBudget={onUpdateBudget}
                 onCreateWorkbook={onCreateWorkbook}
                 onQuickView={setQuickViewWorkbook}
+                onMarkPaid={onMarkPaid}
                 formatWithCommas={formatWithCommas}
               />
             ))}
@@ -879,8 +950,10 @@ function BudgetManagerDialog({
   onSetWorkbookCategory,
   onSetCategoryColor,
   onSetCategoryLimit,
+  onRenameCategory,
   onCloneCategories,
   onCreateWorkbook,
+  onMarkPaid,
   formatWithCommas
 }) {
   const [mode, setMode] = useState('list');
@@ -947,6 +1020,14 @@ function BudgetManagerDialog({
     onClose();
   };
 
+  // Marking a workbook paid from here starts the exact same payment flow
+  // used everywhere else (top menu, search results) - close this panel
+  // first so the payment dialog isn't stacked behind it.
+  const handleMarkPaidFromDetail = (workbook) => {
+    onMarkPaid(workbook);
+    onClose();
+  };
+
   const headerTitle = mode === 'form'
     ? (editingBudget ? 'Edit Budget' : 'New Budget')
     : mode === 'detail'
@@ -988,8 +1069,10 @@ function BudgetManagerDialog({
             onSetWorkbookCategory={onSetWorkbookCategory}
             onSetCategoryColor={onSetCategoryColor}
             onSetCategoryLimit={onSetCategoryLimit}
+            onRenameCategory={onRenameCategory}
             onUpdateBudget={onUpdateBudget}
             onCreateWorkbook={handleCreateWorkbookFromDetail}
+            onMarkPaid={handleMarkPaidFromDetail}
             formatWithCommas={formatWithCommas}
           />
         ) : (
@@ -1126,9 +1209,11 @@ BudgetCategoryNode.propTypes = {
   onSetWorkbookCategory: PropTypes.func.isRequired,
   onSetCategoryColor: PropTypes.func.isRequired,
   onSetCategoryLimit: PropTypes.func.isRequired,
+  onRenameCategory: PropTypes.func.isRequired,
   onUpdateBudget: PropTypes.func.isRequired,
   onCreateWorkbook: PropTypes.func.isRequired,
   onQuickView: PropTypes.func.isRequired,
+  onMarkPaid: PropTypes.func.isRequired,
   formatWithCommas: PropTypes.func.isRequired
 };
 
@@ -1143,8 +1228,10 @@ BudgetDetail.propTypes = {
   onSetWorkbookCategory: PropTypes.func.isRequired,
   onSetCategoryColor: PropTypes.func.isRequired,
   onSetCategoryLimit: PropTypes.func.isRequired,
+  onRenameCategory: PropTypes.func.isRequired,
   onUpdateBudget: PropTypes.func.isRequired,
   onCreateWorkbook: PropTypes.func.isRequired,
+  onMarkPaid: PropTypes.func.isRequired,
   formatWithCommas: PropTypes.func.isRequired
 };
 
@@ -1189,8 +1276,10 @@ BudgetManagerDialog.propTypes = {
   onSetWorkbookCategory: PropTypes.func.isRequired,
   onSetCategoryColor: PropTypes.func.isRequired,
   onSetCategoryLimit: PropTypes.func.isRequired,
+  onRenameCategory: PropTypes.func.isRequired,
   onCloneCategories: PropTypes.func.isRequired,
   onCreateWorkbook: PropTypes.func.isRequired,
+  onMarkPaid: PropTypes.func.isRequired,
   formatWithCommas: PropTypes.func.isRequired
 };
 

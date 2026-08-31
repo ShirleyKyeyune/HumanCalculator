@@ -18,6 +18,7 @@ import { QRCodeIcon } from "./icons/Icons";
 import useWorkbookManager from "./hooks/useWorkbookManager";
 import useCategories, { getPath } from "./hooks/useCategories";
 import useBudgets from "./hooks/useBudgets";
+import { getPaymentStatus } from "./utils/workbookTotal";
 
 /* ─────────────  Helper functions  ───────────── */
 const parserOptions = { operators: { assignment: true } };
@@ -50,7 +51,7 @@ const formatDate = (date) => {
     return `Yesterday at ${dateToFormat.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
   } else {
     return dateToFormat.toLocaleDateString([], { month: 'short', day: 'numeric' }) +
-           ` at ${dateToFormat.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      ` at ${dateToFormat.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
   }
 };
 
@@ -96,7 +97,7 @@ export default function HumanWebCalculator({
   showMobileMoney,
   collapseCalculator,
   onExpandCalculator,
-  onCloseMobileMoney}) {
+  onCloseMobileMoney }) {
   const seedLines = [
     "bottles 1.2k x 300 people",
     "Quantity: 300 × 1.2k bottles",
@@ -243,12 +244,6 @@ export default function HumanWebCalculator({
     removeCategoriesFromBudgets(removedIds);
   }, [deleteCategory, clearWorkbookCategoryReferences, removeCategoriesFromBudgets]);
 
-  // Move a workbook to a different category (or un-categorize it),
-  // via drag-and-drop or the "Move to" select in the category manager
-  const handleMoveWorkbookToCategory = useCallback((workbookId, categoryId) => {
-    updateWorkbook(workbookId, { categoryId });
-  }, [updateWorkbook]);
-
   // Toggle budget manager
   const toggleBudgetManager = useCallback(() => {
     setShowBudgetManager(prev => !prev);
@@ -314,7 +309,7 @@ export default function HumanWebCalculator({
       };
 
       let rawContent = '';
-      
+
       // If there's a selection, use that content
       if (selectionStart !== selectionEnd) {
         const selectedText = value.slice(selectionStart, selectionEnd).trim();
@@ -330,10 +325,10 @@ export default function HumanWebCalculator({
 
       // Normalize the content to handle special characters
       const normalizedContent = normalizeText(rawContent);
-      
+
       // Add the total as a separate line
       const content = normalizedContent + '\n\nTotal: ' + formatWithCommas(calculationTotal);
-      
+
       // Set the QR code content
       setQRCodeContent(content);
       console.log('QR Code content:', content); // Debug log
@@ -457,11 +452,11 @@ export default function HumanWebCalculator({
         setSelectionResult('Error');
       }
     };
-    ['mouseup','keyup','select'].forEach(evt => ta.addEventListener(evt, handler));
+    ['mouseup', 'keyup', 'select'].forEach(evt => ta.addEventListener(evt, handler));
     document.addEventListener('selectionchange', handler);
     handler();
     return () => {
-      ['mouseup','keyup','select'].forEach(evt => ta.removeEventListener(evt, handler));
+      ['mouseup', 'keyup', 'select'].forEach(evt => ta.removeEventListener(evt, handler));
       document.removeEventListener('selectionchange', handler);
     };
   }, [processMultiLineExpression, total]);
@@ -473,8 +468,8 @@ export default function HumanWebCalculator({
       // Check if this is significantly different from the last history item
       const lastHistoryItem = calculationHistory[0];
       if (!lastHistoryItem ||
-          Math.abs(lastHistoryItem.total - total) > 0.1 ||
-          lastHistoryItem.content !== text) {
+        Math.abs(lastHistoryItem.total - total) > 0.1 ||
+        lastHistoryItem.content !== text) {
         // Debounce the save operation to avoid too many history items
         const timer = setTimeout(() => {
           const now = new Date();
@@ -763,11 +758,6 @@ export default function HumanWebCalculator({
         categories={categories}
         workbooks={savedWorkbooks}
         onAddCategory={addCategory}
-        onRenameCategory={renameCategory}
-        onDeleteCategory={handleDeleteCategory}
-        onSetCategoryColor={setCategoryColor}
-        onSetCategoryLimit={setCategoryLimit}
-        onMoveWorkbook={handleMoveWorkbookToCategory}
         onOpenWorkbook={loadWorkbook}
         formatWithCommas={formatWithCommas}
       />
@@ -788,8 +778,10 @@ export default function HumanWebCalculator({
         onSetWorkbookCategory={handleSetWorkbookCategory}
         onSetCategoryColor={setCategoryColor}
         onSetCategoryLimit={setCategoryLimit}
+        onRenameCategory={renameCategory}
         onCloneCategories={cloneCategoriesAsEmpty}
         onCreateWorkbook={createNewWorkbook}
+        onMarkPaid={openPaymentDialogForWorkbook}
         formatWithCommas={formatWithCommas}
       />
 
@@ -1004,51 +996,58 @@ export default function HumanWebCalculator({
               <div className="saved-workbooks">
                 {savedWorkbooks.length > 0 ? (
                   <ul className="workbook-list">
-                    {savedWorkbooks.map(workbook => (
-                      <li key={workbook.id} className="workbook-item">
-                        <div className="workbook-info">
-                          <span className="workbook-name">{workbook.name}</span>
-                          <span className="workbook-date">
-                            {workbook.displayDate || formatDate(workbook.date)}
-                          </span>
-                          <div className="workbook-payment-status">
-                            {workbook.isPaid ? (
-                              <span className="workbook-paid-badge paid">
-                                Paid {formatWithCommas(workbook.amountPaid || 0)}
-                                {workbook.paidAtDisplay ? ` · ${workbook.paidAtDisplay}` : ''}
-                              </span>
-                            ) : (
-                              <span className="workbook-paid-badge unpaid">Unpaid</span>
-                            )}
-                            {getCategoryLabel(workbook.categoryId) && (
-                              <span className="workbook-category-tag">
-                                {getCategoryLabel(workbook.categoryId)}
-                              </span>
-                            )}
+                    {savedWorkbooks.map(workbook => {
+                      const paymentStatus = getPaymentStatus(workbook);
+                      return (
+                        <li key={workbook.id} className="workbook-item">
+                          <div className="workbook-info">
+                            <span className="workbook-name">{workbook.name}</span>
+                            <span className="workbook-date">
+                              {workbook.displayDate || formatDate(workbook.date)}
+                            </span>
+                            <div className="workbook-payment-status">
+                              {paymentStatus.status === 'paid' ? (
+                                <span className="workbook-paid-badge paid">
+                                  Paid {formatWithCommas(paymentStatus.paid)}
+                                  {workbook.paidAtDisplay ? ` · ${workbook.paidAtDisplay}` : ''}
+                                </span>
+                              ) : paymentStatus.status === 'partial' ? (
+                                <span className="workbook-paid-badge partial">
+                                  Partial {formatWithCommas(paymentStatus.paid)}/{formatWithCommas(paymentStatus.paid + paymentStatus.remaining)}
+                                </span>
+                              ) : (
+                                <span className="workbook-paid-badge unpaid">Unpaid</span>
+                              )}
+                              {getCategoryLabel(workbook.categoryId) && (
+                                <span className="workbook-category-tag">
+                                  {getCategoryLabel(workbook.categoryId)}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                        <div className="workbook-actions">
-                          <button
-                            onClick={() => loadWorkbook(workbook)}
-                            className="workbook-action-button load"
-                          >
-                            Load
-                          </button>
-                          <button
-                            onClick={() => openPaymentDialogForWorkbook(workbook)}
-                            className="workbook-action-button mark-paid"
-                          >
-                            {workbook.isPaid ? 'Edit Payment' : 'Mark Paid'}
-                          </button>
-                          <button
-                            onClick={() => handleDeleteWorkbook(workbook.id)}
-                            className="workbook-action-button delete"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </li>
-                    ))}
+                          <div className="workbook-actions">
+                            <button
+                              onClick={() => loadWorkbook(workbook)}
+                              className="workbook-action-button load"
+                            >
+                              Load
+                            </button>
+                            <button
+                              onClick={() => openPaymentDialogForWorkbook(workbook)}
+                              className="workbook-action-button mark-paid"
+                            >
+                              {paymentStatus.status === 'paid' ? 'Edit Payment' : paymentStatus.status === 'partial' ? 'Record Payment' : 'Mark Paid'}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteWorkbook(workbook.id)}
+                              className="workbook-action-button delete"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </li>
+                      );
+                    })}
                   </ul>
                 ) : (
                   <p className="no-workbooks">No saved workbooks found.</p>

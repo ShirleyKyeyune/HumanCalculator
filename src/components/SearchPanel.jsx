@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { getPath } from '../hooks/useCategories';
+import { getPaymentStatus } from '../utils/workbookTotal';
 
 /**
  * SearchPanel Component
@@ -145,6 +146,7 @@ function SearchPanel({
             {results.map(result => {
               const isExpanded = expandedKey === result.key;
               const snippetLines = getSnippetLines(result.content, q);
+              const paymentStatus = result.type === 'workbook' ? getPaymentStatus(result.raw) : null;
 
               return (
                 <li key={result.key} className="search-result-item">
@@ -172,9 +174,13 @@ function SearchPanel({
                   </div>
                   {result.type === 'workbook' && (
                     <div className="search-result-payment-status">
-                      {result.raw.isPaid ? (
+                      {paymentStatus.status === 'paid' ? (
                         <span className="workbook-paid-badge paid">
-                          Paid {formatWithCommas(result.raw.amountPaid || 0)}
+                          Paid {formatWithCommas(paymentStatus.paid)}
+                        </span>
+                      ) : paymentStatus.status === 'partial' ? (
+                        <span className="workbook-paid-badge partial">
+                          Partial {formatWithCommas(paymentStatus.paid)}/{formatWithCommas(paymentStatus.paid + paymentStatus.remaining)}
                         </span>
                       ) : (
                         <span className="workbook-paid-badge unpaid">Unpaid</span>
@@ -198,7 +204,7 @@ function SearchPanel({
                         className="search-result-action-button mark-paid"
                         onClick={() => onMarkPaid(result.raw)}
                       >
-                        {result.raw.isPaid ? 'Edit Payment' : 'Mark Paid'}
+                        {paymentStatus.status === 'paid' ? 'Edit Payment' : paymentStatus.status === 'partial' ? 'Record Payment' : 'Mark Paid'}
                       </button>
                     )}
                     <button

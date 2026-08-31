@@ -103,12 +103,6 @@ function App() {
                   onClick: () => document.getElementById('spending-summary-trigger').click()
                 },
                 {
-                  label: 'Budgets',
-                  icon: <TargetIcon className="button-icon" />,
-                  title: 'Create and manage budgets',
-                  onClick: () => document.getElementById('budget-manager-trigger').click()
-                },
-                {
                   label: 'Categories',
                   icon: <TagIcon className="button-icon" />,
                   title: 'Manage categories and subcategories',
@@ -116,6 +110,14 @@ function App() {
                 }
               ]}
             />
+            <button
+              className="workbook-button"
+              id="budgets-nav-button"
+              onClick={() => document.getElementById('budget-manager-trigger').click()}
+              title="Create and manage budgets"
+            >
+              <TargetIcon className="button-icon" /> Budgets
+            </button>
             <button
               className="workbook-button"
               id="mobile-money-button"
