@@ -9,11 +9,15 @@ import HistoryPanel from "./components/HistoryPanel";
 import SearchPanel from "./components/SearchPanel";
 import PaymentDialog from "./components/PaymentDialog";
 import SpendingSummaryPanel from "./components/SpendingSummaryPanel";
+import CategoryManagerDialog from "./components/CategoryManagerDialog";
+import BudgetManagerDialog from "./components/BudgetManagerDialog";
+import OrganizeWorkbookDialog from "./components/OrganizeWorkbookDialog";
 import QRCodeDisplay from "./components/QRCodeDisplay";
 import MobileMoneyCalculator from "./components/MobileMoneyCalculator";
 import { QRCodeIcon } from "./icons/Icons";
 import useWorkbookManager from "./hooks/useWorkbookManager";
-import useCategories from "./hooks/useCategories";
+import useCategories, { getPath } from "./hooks/useCategories";
+import useBudgets from "./hooks/useBudgets";
 
 /* ─────────────  Helper functions  ───────────── */
 const parserOptions = { operators: { assignment: true } };
@@ -86,6 +90,10 @@ export default function HumanWebCalculator({
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [paymentTargetWorkbook, setPaymentTargetWorkbook] = useState(null);
   const [showSpendingSummary, setShowSpendingSummary] = useState(false);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const [showBudgetManager, setShowBudgetManager] = useState(false);
+  const [showOrganizeDialog, setShowOrganizeDialog] = useState(false);
+  const [organizeTargetWorkbook, setOrganizeTargetWorkbook] = useState(null);
   const [showQRCode, setShowQRCode] = useState(false);
   const [qrCodeContent, setQRCodeContent] = useState('');
   const textareaRef = useRef(null);
@@ -102,11 +110,15 @@ export default function HumanWebCalculator({
     deleteWorkbook,
     createNewWorkbook,
     getCurrentWorkbookRecord,
-    updateWorkbookPayment
+    updateWorkbook,
+    clearWorkbookCategoryReferences
   } = useWorkbookManager(text, setText, workbookName, setWorkbookName, showSaveDialog, setShowSaveDialog);
 
-  // Use the categories hook to manage expense categories/subcategories
-  const { categories, addCategory, addSubcategory } = useCategories();
+  // Use the categories hook to manage the expense category tree
+  const { categories, addCategory, renameCategory, deleteCategory } = useCategories();
+
+  // Use the budgets hook to manage spending budgets
+  const { budgets, addBudget, updateBudget, deleteBudget, removeWorkbookFromBudgets } = useBudgets();
 
   // Dark mode toggle moved to App component
 
@@ -150,12 +162,62 @@ export default function HumanWebCalculator({
   };
 
   const handleSavePayment = (id, paymentData) => {
-    updateWorkbookPayment(id, paymentData);
+    updateWorkbook(id, paymentData);
   };
 
   // Toggle spending summary report
   const toggleSpendingSummary = () => {
     setShowSpendingSummary(prev => !prev);
+  };
+
+  // Toggle category manager
+  const toggleCategoryManager = () => {
+    setShowCategoryManager(prev => !prev);
+  };
+
+  // Delete a category (and its descendants), then un-categorize any
+  // workbook that referenced one of the removed categories
+  const handleDeleteCategory = (id) => {
+    const removedIds = deleteCategory(id);
+    clearWorkbookCategoryReferences(removedIds);
+  };
+
+  // Toggle budget manager
+  const toggleBudgetManager = () => {
+    setShowBudgetManager(prev => !prev);
+  };
+
+  // Delete a workbook, then detach it from any budget that referenced it
+  const handleDeleteWorkbook = (id) => {
+    deleteWorkbook(id);
+    removeWorkbookFromBudgets(id);
+  };
+
+  // Open the "add to budget/category" dialog for the workbook currently
+  // loaded in the editor, saving it first if it hasn't been saved yet
+  const openOrganizeDialogForCurrent = () => {
+    const currentWorkbook = getCurrentWorkbookRecord();
+    if (!currentWorkbook) return;
+    setOrganizeTargetWorkbook(currentWorkbook);
+    setShowOrganizeDialog(true);
+  };
+
+  const closeOrganizeDialog = () => {
+    setShowOrganizeDialog(false);
+    setOrganizeTargetWorkbook(null);
+  };
+
+  const handleSetWorkbookCategory = (id, categoryId) => {
+    updateWorkbook(id, { categoryId });
+  };
+
+  const handleToggleWorkbookBudget = (budget, shouldInclude) => {
+    if (!organizeTargetWorkbook) return;
+    const currentIds = budget.workbookIds || [];
+    const nextIds = shouldInclude
+      ? [...currentIds, organizeTargetWorkbook.id]
+      : currentIds.filter(id => id !== organizeTargetWorkbook.id);
+    updateBudget(budget.id, { workbookIds: nextIds });
   };
 
   // Toggle QR code display
@@ -409,6 +471,13 @@ export default function HumanWebCalculator({
     }
   };
 
+  // Build a "Category › Subcategory › ..." label for a workbook's category id
+  const getCategoryLabel = (categoryId) => {
+    if (!categoryId) return null;
+    const path = getPath(categories, categoryId);
+    return path.length > 0 ? path.map(node => node.name).join(' › ') : null;
+  };
+
   // Workbook management functions are now provided by the useWorkbookManager hook
 
   // Export workbook in various formats
@@ -563,6 +632,27 @@ export default function HumanWebCalculator({
         Spending Summary
       </button>
       <button
+        id="category-manager-trigger"
+        onClick={toggleCategoryManager}
+        style={{ display: 'none' }}
+      >
+        Manage Categories
+      </button>
+      <button
+        id="budget-manager-trigger"
+        onClick={toggleBudgetManager}
+        style={{ display: 'none' }}
+      >
+        Manage Budgets
+      </button>
+      <button
+        id="organize-workbook-trigger"
+        onClick={openOrganizeDialogForCurrent}
+        style={{ display: 'none' }}
+      >
+        Add to Budget / Category
+      </button>
+      <button
         id="new-workbook-trigger"
         onClick={createNewWorkbook}
         style={{ display: 'none' }}
@@ -588,6 +678,7 @@ export default function HumanWebCalculator({
         onClose={toggleSearchPanel}
         workbooks={savedWorkbooks}
         history={calculationHistory}
+        categories={categories}
         onOpenWorkbook={loadWorkbook}
         onOpenHistory={loadFromHistory}
         onMarkPaid={(workbook) => {
@@ -605,7 +696,6 @@ export default function HumanWebCalculator({
         workbook={paymentTargetWorkbook}
         categories={categories}
         onAddCategory={addCategory}
-        onAddSubcategory={addSubcategory}
         onSave={handleSavePayment}
         formatWithCommas={formatWithCommas}
       />
@@ -615,8 +705,46 @@ export default function HumanWebCalculator({
         isVisible={showSpendingSummary}
         onClose={toggleSpendingSummary}
         workbooks={savedWorkbooks}
+        categories={categories}
         onOpenWorkbook={loadWorkbook}
         formatWithCommas={formatWithCommas}
+      />
+
+      {/* Category Manager */}
+      <CategoryManagerDialog
+        isVisible={showCategoryManager}
+        onClose={toggleCategoryManager}
+        categories={categories}
+        workbooks={savedWorkbooks}
+        onAddCategory={addCategory}
+        onRenameCategory={renameCategory}
+        onDeleteCategory={handleDeleteCategory}
+      />
+
+      {/* Budget Manager */}
+      <BudgetManagerDialog
+        isVisible={showBudgetManager}
+        onClose={toggleBudgetManager}
+        budgets={budgets}
+        categories={categories}
+        workbooks={savedWorkbooks}
+        onAddBudget={addBudget}
+        onUpdateBudget={updateBudget}
+        onDeleteBudget={deleteBudget}
+        formatWithCommas={formatWithCommas}
+      />
+
+      {/* Organize Workbook (assign category / attach to budgets) */}
+      <OrganizeWorkbookDialog
+        key={organizeTargetWorkbook?.id || 'none'}
+        isVisible={showOrganizeDialog}
+        onClose={closeOrganizeDialog}
+        workbook={organizeTargetWorkbook}
+        categories={categories}
+        budgets={budgets}
+        onAddCategory={addCategory}
+        onSetCategory={handleSetWorkbookCategory}
+        onToggleBudget={handleToggleWorkbookBudget}
       />
 
       {collapseCalculator ? (
@@ -707,7 +835,7 @@ export default function HumanWebCalculator({
               <button onClick={() => setShowSaveDialog(false)} className="dialog-button cancel">
                 Cancel
               </button>
-              <button onClick={saveWorkbook} className="dialog-button save">
+              <button onClick={() => saveWorkbook(true)} className="dialog-button save">
                 Save
               </button>
             </div>
@@ -803,10 +931,9 @@ export default function HumanWebCalculator({
                             ) : (
                               <span className="workbook-paid-badge unpaid">Unpaid</span>
                             )}
-                            {workbook.category && (
+                            {getCategoryLabel(workbook.categoryId) && (
                               <span className="workbook-category-tag">
-                                {workbook.category}
-                                {workbook.subcategory ? ` › ${workbook.subcategory}` : ''}
+                                {getCategoryLabel(workbook.categoryId)}
                               </span>
                             )}
                           </div>
@@ -825,7 +952,7 @@ export default function HumanWebCalculator({
                             {workbook.isPaid ? 'Edit Payment' : 'Mark Paid'}
                           </button>
                           <button
-                            onClick={() => deleteWorkbook(workbook.id)}
+                            onClick={() => handleDeleteWorkbook(workbook.id)}
                             className="workbook-action-button delete"
                           >
                             Delete

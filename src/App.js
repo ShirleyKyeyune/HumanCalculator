@@ -1,7 +1,11 @@
 import './App.css';
 import { useState, useEffect } from 'react';
 import HumanWebCalculator from './HumanWebCalculator';
-import { SunIcon, MoonIcon, ShareIcon, HistoryIcon, WalletIcon, SearchIcon, PaidIcon, ChartIcon } from './icons/Icons';
+import ToolbarMenu from './components/ToolbarMenu';
+import {
+  SunIcon, MoonIcon, ShareIcon, HistoryIcon, WalletIcon, SearchIcon, PaidIcon,
+  ChartIcon, TagIcon, TargetIcon, PlusIcon, SaveIcon, ImportIcon, FolderPlusIcon
+} from './icons/Icons';
 import pkg from '../package.json';
 const calculatorIcon = process.env.PUBLIC_URL + '/favicon.svg';
 
@@ -35,64 +39,80 @@ function App() {
             aria-label="Workbook name"
           />
           <div className="workbook-buttons">
-            <button
-              onClick={() => document.getElementById('new-workbook-trigger').click()}
-              className="workbook-button"
-            >
-              New
-            </button>
-            <button
-              onClick={() => setShowSaveDialog(true)}
-              className="workbook-button"
-            >
-              Save
-            </button>
-            <button
-              onClick={() => setShowImportDialog(true)}
-              className="workbook-button"
-            >
-              Import
-            </button>
-            <button
-              className="workbook-button"
-              id="export-button"
-              onClick={() => document.getElementById('export-trigger').click()}
-              title="Export calculation results"
-            >
-              <ShareIcon className="button-icon" /> Export
-            </button>
-            <button
-              className="workbook-button"
-              id="history-button"
-              onClick={() => document.getElementById('history-trigger').click()}
-              title="View calculation history"
-            >
-              <HistoryIcon className="button-icon" /> History
-            </button>
-            <button
-              className="workbook-button"
-              id="search-button"
-              onClick={() => document.getElementById('search-trigger').click()}
-              title="Search saved workbooks and history"
-            >
-              <SearchIcon className="button-icon" /> Search
-            </button>
-            <button
-              className="workbook-button"
-              id="mark-paid-button"
-              onClick={() => document.getElementById('mark-paid-trigger').click()}
-              title="Mark this workbook as paid"
-            >
-              <PaidIcon className="button-icon" /> Mark Paid
-            </button>
-            <button
-              className="workbook-button"
-              id="spending-summary-button"
-              onClick={() => document.getElementById('spending-summary-trigger').click()}
-              title="View spending by category"
-            >
-              <ChartIcon className="button-icon" /> Summary
-            </button>
+            <ToolbarMenu
+              label="Workbook"
+              icon={<SaveIcon className="button-icon" />}
+              items={[
+                {
+                  label: 'New',
+                  icon: <PlusIcon className="button-icon" />,
+                  onClick: () => document.getElementById('new-workbook-trigger').click()
+                },
+                {
+                  label: 'Save',
+                  icon: <SaveIcon className="button-icon" />,
+                  onClick: () => setShowSaveDialog(true)
+                },
+                {
+                  label: 'Import',
+                  icon: <ImportIcon className="button-icon" />,
+                  onClick: () => setShowImportDialog(true)
+                },
+                {
+                  label: 'Export',
+                  icon: <ShareIcon className="button-icon" />,
+                  onClick: () => document.getElementById('export-trigger').click()
+                },
+                {
+                  label: 'Mark Paid',
+                  icon: <PaidIcon className="button-icon" />,
+                  title: 'Mark this workbook as paid',
+                  onClick: () => document.getElementById('mark-paid-trigger').click()
+                },
+                {
+                  label: 'Add to Budget / Category',
+                  icon: <FolderPlusIcon className="button-icon" />,
+                  title: 'Assign a category or attach to a budget',
+                  onClick: () => document.getElementById('organize-workbook-trigger').click()
+                }
+              ]}
+            />
+            <ToolbarMenu
+              label="Insights"
+              icon={<ChartIcon className="button-icon" />}
+              items={[
+                {
+                  label: 'History',
+                  icon: <HistoryIcon className="button-icon" />,
+                  title: 'View calculation history',
+                  onClick: () => document.getElementById('history-trigger').click()
+                },
+                {
+                  label: 'Search',
+                  icon: <SearchIcon className="button-icon" />,
+                  title: 'Search saved workbooks and history',
+                  onClick: () => document.getElementById('search-trigger').click()
+                },
+                {
+                  label: 'Summary',
+                  icon: <ChartIcon className="button-icon" />,
+                  title: 'View spending by category',
+                  onClick: () => document.getElementById('spending-summary-trigger').click()
+                },
+                {
+                  label: 'Budgets',
+                  icon: <TargetIcon className="button-icon" />,
+                  title: 'Create and manage budgets',
+                  onClick: () => document.getElementById('budget-manager-trigger').click()
+                },
+                {
+                  label: 'Categories',
+                  icon: <TagIcon className="button-icon" />,
+                  title: 'Manage categories and subcategories',
+                  onClick: () => document.getElementById('category-manager-trigger').click()
+                }
+              ]}
+            />
             <button
               className="workbook-button"
               id="mobile-money-button"

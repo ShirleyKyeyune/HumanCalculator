@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import calculatorService from '../services/calculatorService';
+import AmountInput from './AmountInput';
+import CategoryPicker from './CategoryPicker';
 
 const pad = (n) => String(n).padStart(2, '0');
 
@@ -46,7 +48,6 @@ function PaymentDialog({
   workbook,
   categories,
   onAddCategory,
-  onAddSubcategory,
   onSave,
   formatWithCommas
 }) {
@@ -70,56 +71,9 @@ function PaymentDialog({
     toDateTimeInputValue(wasAlreadyPaid && workbook.paidAt ? new Date(workbook.paidAt) : new Date())
   );
 
-  const [selectedCategoryId, setSelectedCategoryId] = useState(workbook?.categoryId || '');
-  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState(workbook?.subcategoryId || '');
-  const [addingCategory, setAddingCategory] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [addingSubcategory, setAddingSubcategory] = useState(false);
-  const [newSubcategoryName, setNewSubcategoryName] = useState('');
+  const [categoryId, setCategoryId] = useState(workbook?.categoryId || null);
 
   if (!isVisible || !workbook) return null;
-
-  const selectedCategory = categories.find(c => c.id === selectedCategoryId) || null;
-  const subcategoryOptions = selectedCategory ? selectedCategory.subcategories : [];
-
-  const handleCategoryChange = (e) => {
-    const value = e.target.value;
-    if (value === '__add__') {
-      setAddingCategory(true);
-      return;
-    }
-    setSelectedCategoryId(value);
-    setSelectedSubcategoryId('');
-  };
-
-  const handleConfirmAddCategory = () => {
-    const created = onAddCategory(newCategoryName);
-    if (created) {
-      setSelectedCategoryId(created.id);
-      setSelectedSubcategoryId('');
-    }
-    setNewCategoryName('');
-    setAddingCategory(false);
-  };
-
-  const handleSubcategoryChange = (e) => {
-    const value = e.target.value;
-    if (value === '__add__') {
-      setAddingSubcategory(true);
-      return;
-    }
-    setSelectedSubcategoryId(value);
-  };
-
-  const handleConfirmAddSubcategory = () => {
-    if (!selectedCategoryId) return;
-    const created = onAddSubcategory(selectedCategoryId, newSubcategoryName);
-    if (created) {
-      setSelectedSubcategoryId(created.id);
-    }
-    setNewSubcategoryName('');
-    setAddingSubcategory(false);
-  };
 
   const computeAmount = () => {
     if (amountMode === 'full') return total;
@@ -140,17 +94,13 @@ function PaymentDialog({
 
   const handleMarkPaid = () => {
     const paidAt = computePaidAt();
-    const subcategory = subcategoryOptions.find(s => s.id === selectedSubcategoryId) || null;
 
     onSave(workbook.id, {
       isPaid: true,
       amountPaid: computeAmount(),
       paidAt: paidAt.toISOString(),
       paidAtDisplay: formatDateTimeForDisplay(paidAt),
-      category: selectedCategory ? selectedCategory.name : null,
-      categoryId: selectedCategory ? selectedCategory.id : null,
-      subcategory: subcategory ? subcategory.name : null,
-      subcategoryId: subcategory ? subcategory.id : null
+      categoryId
     });
     onClose();
   };
@@ -190,10 +140,9 @@ function PaymentDialog({
             </button>
           </div>
           {amountMode === 'other' && (
-            <input
-              type="number"
+            <AmountInput
               value={customAmount}
-              onChange={(e) => setCustomAmount(e.target.value)}
+              onChange={setCustomAmount}
               placeholder="Enter amount paid"
               className="dialog-input"
               autoFocus
@@ -201,82 +150,12 @@ function PaymentDialog({
           )}
 
           <label className="payment-section-label">Category</label>
-          <div className="category-select-row">
-            <select
-              value={addingCategory ? '__add__' : selectedCategoryId}
-              onChange={handleCategoryChange}
-              className="dialog-input category-select"
-            >
-              <option value="">No category</option>
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-              <option value="__add__">+ Add new category...</option>
-            </select>
-          </div>
-          {addingCategory && (
-            <div className="category-add-inline">
-              <input
-                type="text"
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                placeholder="New category name"
-                className="dialog-input"
-                autoFocus
-              />
-              <button type="button" className="category-add-button" onClick={handleConfirmAddCategory}>
-                Add
-              </button>
-              <button
-                type="button"
-                className="category-cancel-button"
-                onClick={() => { setAddingCategory(false); setNewCategoryName(''); }}
-              >
-                Cancel
-              </button>
-            </div>
-          )}
-
-          {selectedCategory && (
-            <>
-              <label className="payment-section-label">Subcategory</label>
-              <div className="category-select-row">
-                <select
-                  value={addingSubcategory ? '__add__' : selectedSubcategoryId}
-                  onChange={handleSubcategoryChange}
-                  className="dialog-input category-select"
-                >
-                  <option value="">No subcategory</option>
-                  {subcategoryOptions.map(sub => (
-                    <option key={sub.id} value={sub.id}>{sub.name}</option>
-                  ))}
-                  <option value="__add__">+ Add new subcategory...</option>
-                </select>
-              </div>
-              {addingSubcategory && (
-                <div className="category-add-inline">
-                  <input
-                    type="text"
-                    value={newSubcategoryName}
-                    onChange={(e) => setNewSubcategoryName(e.target.value)}
-                    placeholder="New subcategory name"
-                    className="dialog-input"
-                    autoFocus
-                  />
-                  <button type="button" className="category-add-button" onClick={handleConfirmAddSubcategory}>
-                    Add
-                  </button>
-                  <button
-                    type="button"
-                    className="category-cancel-button"
-                    onClick={() => { setAddingSubcategory(false); setNewSubcategoryName(''); }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              )}
-            </>
-          )}
+          <CategoryPicker
+            categories={categories}
+            initialCategoryId={workbook.categoryId}
+            onChange={setCategoryId}
+            onAddCategory={onAddCategory}
+          />
 
           <label className="payment-section-label">Paid</label>
           <div className="payment-quick-options">
@@ -348,18 +227,16 @@ PaymentDialog.propTypes = {
     isPaid: PropTypes.bool,
     amountPaid: PropTypes.number,
     paidAt: PropTypes.string,
-    categoryId: PropTypes.string,
-    subcategoryId: PropTypes.string
+    categoryId: PropTypes.string
   }),
   categories: PropTypes.arrayOf(
     PropTypes.shape({
       id: PropTypes.string.isRequired,
       name: PropTypes.string.isRequired,
-      subcategories: PropTypes.array
+      parentId: PropTypes.string
     })
   ).isRequired,
   onAddCategory: PropTypes.func.isRequired,
-  onAddSubcategory: PropTypes.func.isRequired,
   onSave: PropTypes.func.isRequired,
   formatWithCommas: PropTypes.func.isRequired
 };

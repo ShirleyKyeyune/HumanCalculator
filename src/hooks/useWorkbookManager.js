@@ -38,30 +38,64 @@ function useWorkbookManager(text, setText, workbookName, setWorkbookName, showSa
   useEffect(() => {
     const storedWorkbooks = localStorage.getItem('humanCalculatorWorkbooks');
     if (storedWorkbooks) {
-      setSavedWorkbooks(JSON.parse(storedWorkbooks));
+      const parsed = JSON.parse(storedWorkbooks);
+      // Migrate the old { category, categoryId, subcategory, subcategoryId }
+      // shape (2 levels only) down to a single leaf `categoryId`, matching
+      // the category tree's flat { id, name, parentId } shape.
+      const migrated = parsed.map(wb => {
+        if ('subcategoryId' in wb || 'category' in wb) {
+          const { category, subcategory, categoryId, subcategoryId, ...rest } = wb;
+          return { ...rest, categoryId: subcategoryId || categoryId || null };
+        }
+        return wb;
+      });
+      setSavedWorkbooks(migrated);
+      localStorage.setItem('humanCalculatorWorkbooks', JSON.stringify(migrated));
     }
   }, []);
 
   /**
-   * Save current workbook if content has changed significantly
-   * Prevents duplicate saves by checking if the current content is different
-   * from the last saved workbook
-   * 
-   * @param {boolean} forceSave - If true, save regardless of content similarity
-   * @returns {object|null} - The saved workbook, or null if nothing was saved
+   * Save current workbook - idempotent against the *entire* saved list, not
+   * just the last entry, so revisiting or re-saving identical content never
+   * creates a duplicate row (e.g. auto-save firing repeatedly, or clicking
+   * Save on unchanged content).
+   *
+   * @param {boolean} forceSave - If true, an exact-content match is
+   * refreshed in place (name/date) instead of being skipped outright.
+   * @returns {object|null} - The saved/updated workbook, or null if nothing
+   * changed
    */
   const saveWorkbook = useCallback((forceSave = false) => {
     // Don't save empty workbooks
     if (!text.trim()) return null;
 
-    // Check if this content is significantly different from the last saved workbook
-    const lastWorkbook = savedWorkbooks.length > 0 ? savedWorkbooks[savedWorkbooks.length - 1] : null;
+    // Idempotency: this exact content may already be saved somewhere in the
+    // list (not necessarily the last entry) - never create a second row for it.
+    const existingMatch = savedWorkbooks.find(wb => wb.content === text);
 
-    // If not forcing save, check if content is similar to avoid duplicates
-    if (!forceSave && lastWorkbook && lastWorkbook.content === text) {
-      console.log('Workbook content unchanged, skipping save');
+    if (existingMatch && !forceSave) {
+      // Background/auto-save trigger: nothing new to persist.
+      console.log('Workbook content already saved, skipping duplicate save');
       setShowSaveDialog(false);
       return null;
+    }
+
+    if (existingMatch && forceSave) {
+      // Explicit Save on content that already exists: refresh it in place
+      // (name + timestamp) rather than duplicating it.
+      const now = new Date();
+      const formattedDate = formatDateForDisplay(now);
+      const updatedWorkbook = {
+        ...existingMatch,
+        name: workbookName || existingMatch.name,
+        date: now.toISOString(),
+        displayDate: formattedDate
+      };
+      const updatedWorkbooks = savedWorkbooks.map(wb => (wb.id === existingMatch.id ? updatedWorkbook : wb));
+      setSavedWorkbooks(updatedWorkbooks);
+      localStorage.setItem('humanCalculatorWorkbooks', JSON.stringify(updatedWorkbooks));
+      setShowSaveDialog(false);
+      return updatedWorkbook;
     }
 
     const now = new Date();
@@ -78,10 +112,7 @@ function useWorkbookManager(text, setText, workbookName, setWorkbookName, showSa
       amountPaid: null,
       paidAt: null,
       paidAtDisplay: null,
-      category: null,
-      categoryId: null,
-      subcategory: null,
-      subcategoryId: null
+      categoryId: null
     };
 
     const updatedWorkbooks = [...savedWorkbooks, workbook];
@@ -102,23 +133,38 @@ function useWorkbookManager(text, setText, workbookName, setWorkbookName, showSa
   const getCurrentWorkbookRecord = useCallback(() => {
     if (!text.trim()) return null;
 
-    const lastWorkbook = savedWorkbooks.length > 0 ? savedWorkbooks[savedWorkbooks.length - 1] : null;
-    if (lastWorkbook && lastWorkbook.content === text) {
-      return lastWorkbook;
-    }
+    const existingMatch = savedWorkbooks.find(wb => wb.content === text);
+    if (existingMatch) return existingMatch;
 
     return saveWorkbook(true);
   }, [text, savedWorkbooks, saveWorkbook]);
 
   /**
-   * Update payment/category info on a saved workbook.
+   * Merge arbitrary fields (payment info, category, ...) onto a saved
+   * workbook.
    *
    * @param {string} id - The workbook id to update
-   * @param {object} paymentData - Fields to merge onto the workbook
+   * @param {object} fields - Fields to merge onto the workbook
    */
-  const updateWorkbookPayment = useCallback((id, paymentData) => {
+  const updateWorkbook = useCallback((id, fields) => {
     const updatedWorkbooks = savedWorkbooks.map(wb =>
-      wb.id === id ? { ...wb, ...paymentData } : wb
+      wb.id === id ? { ...wb, ...fields } : wb
+    );
+    setSavedWorkbooks(updatedWorkbooks);
+    localStorage.setItem('humanCalculatorWorkbooks', JSON.stringify(updatedWorkbooks));
+  }, [savedWorkbooks]);
+
+  /**
+   * Clear the category assignment on any workbook that references one of
+   * the given category ids - used after deleting a category (and its
+   * descendants) so workbooks don't keep a dangling reference.
+   *
+   * @param {string[]} categoryIds - ids that were just deleted
+   */
+  const clearWorkbookCategoryReferences = useCallback((categoryIds) => {
+    if (!categoryIds || categoryIds.length === 0) return;
+    const updatedWorkbooks = savedWorkbooks.map(wb =>
+      wb.categoryId && categoryIds.includes(wb.categoryId) ? { ...wb, categoryId: null } : wb
     );
     setSavedWorkbooks(updatedWorkbooks);
     localStorage.setItem('humanCalculatorWorkbooks', JSON.stringify(updatedWorkbooks));
@@ -218,7 +264,8 @@ function useWorkbookManager(text, setText, workbookName, setWorkbookName, showSa
     createNewWorkbook,
     formatDateForDisplay,
     getCurrentWorkbookRecord,
-    updateWorkbookPayment
+    updateWorkbook,
+    clearWorkbookCategoryReferences
   };
 }
 

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
+import { getPath } from '../hooks/useCategories';
 
 /**
  * SearchPanel Component
@@ -23,6 +24,7 @@ function SearchPanel({
   onClose,
   workbooks,
   history,
+  categories,
   onOpenWorkbook,
   onOpenHistory,
   onMarkPaid,
@@ -30,6 +32,12 @@ function SearchPanel({
 }) {
   const [query, setQuery] = useState('');
   const [expandedKey, setExpandedKey] = useState(null);
+
+  const getCategoryLabel = (categoryId) => {
+    if (!categoryId) return null;
+    const path = getPath(categories, categoryId);
+    return path.length > 0 ? path.map(node => node.name).join(' › ') : null;
+  };
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -171,10 +179,9 @@ function SearchPanel({
                       ) : (
                         <span className="workbook-paid-badge unpaid">Unpaid</span>
                       )}
-                      {result.raw.category && (
+                      {getCategoryLabel(result.raw.categoryId) && (
                         <span className="workbook-category-tag">
-                          {result.raw.category}
-                          {result.raw.subcategory ? ` › ${result.raw.subcategory}` : ''}
+                          {getCategoryLabel(result.raw.categoryId)}
                         </span>
                       )}
                     </div>
@@ -234,6 +241,13 @@ SearchPanel.propTypes = {
       total: PropTypes.number,
       date: PropTypes.string,
       displayDate: PropTypes.string
+    })
+  ).isRequired,
+  categories: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      name: PropTypes.string.isRequired,
+      parentId: PropTypes.string
     })
   ).isRequired,
   onOpenWorkbook: PropTypes.func.isRequired,
