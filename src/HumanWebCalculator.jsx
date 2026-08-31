@@ -26,6 +26,34 @@ const parserOptions = { operators: { assignment: true } };
 
 // Strip non-math labels, preserving arithmetic; drop dangling ops
 
+// Format a number with commas - pure, no component state, so it's declared
+// once at module scope instead of being recreated on every render (which
+// would otherwise break React.memo on every panel it's passed to).
+const formatWithCommas = (number) => {
+  return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+};
+
+// Format a date for display in history/workbooks - same reasoning as above.
+const formatDate = (date) => {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  const dateToFormat = new Date(date);
+  const isToday = dateToFormat >= today;
+  const isYesterday = dateToFormat >= yesterday && dateToFormat < today;
+
+  if (isToday) {
+    return `Today at ${dateToFormat.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  } else if (isYesterday) {
+    return `Yesterday at ${dateToFormat.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  } else {
+    return dateToFormat.toLocaleDateString([], { month: 'short', day: 'numeric' }) +
+           ` at ${dateToFormat.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  }
+};
+
 /** Evaluate an expression; fallback to sanitized version */
 export function evaluateExpression(expr, scope = {}) {
   // First handle special cases specific to this calculator
@@ -102,6 +130,15 @@ export default function HumanWebCalculator({
   const resultsContainerRef = useRef(null);
   const historyPanelRef = useRef(null);
 
+  // Mirror the latest text/total into refs so callbacks that need the
+  // "current" calculation (e.g. saveToHistory) can stay referentially
+  // stable across renders instead of picking up a new identity on every
+  // keystroke, which would defeat React.memo on the panels they're passed to.
+  const textRef = useRef(text);
+  textRef.current = text;
+  const totalRef = useRef(total);
+  totalRef.current = total;
+
   // Use the workbook manager hook to handle all workbook-related operations
   const {
     savedWorkbooks,
@@ -132,99 +169,105 @@ export default function HumanWebCalculator({
   }, []);
 
   // Toggle history panel
-  const toggleHistoryPanel = () => {
+  const toggleHistoryPanel = useCallback(() => {
     setShowHistoryPanel(prev => !prev);
-  };
+  }, []);
 
   // Toggle search panel
-  const toggleSearchPanel = () => {
+  const toggleSearchPanel = useCallback(() => {
     setShowSearchPanel(prev => !prev);
-  };
+  }, []);
 
   // Open the payment dialog for the workbook currently loaded in the editor,
   // saving it first if it hasn't been saved yet
-  const openPaymentDialogForCurrent = () => {
+  const openPaymentDialogForCurrent = useCallback(() => {
     const currentWorkbook = getCurrentWorkbookRecord();
     if (!currentWorkbook) return;
     setPaymentTargetWorkbook(currentWorkbook);
     setShowPaymentDialog(true);
-  };
+  }, [getCurrentWorkbookRecord]);
 
   // Open the payment dialog for a specific saved workbook (e.g. from a list)
-  const openPaymentDialogForWorkbook = (workbook) => {
+  const openPaymentDialogForWorkbook = useCallback((workbook) => {
     setPaymentTargetWorkbook(workbook);
     setShowPaymentDialog(true);
-  };
+  }, []);
 
-  const closePaymentDialog = () => {
+  const closePaymentDialog = useCallback(() => {
     setShowPaymentDialog(false);
     setPaymentTargetWorkbook(null);
-  };
+  }, []);
 
-  const handleSavePayment = (id, paymentData) => {
+  const handleSavePayment = useCallback((id, paymentData) => {
     updateWorkbook(id, paymentData);
-  };
+  }, [updateWorkbook]);
+
+  // Close the search panel then open the payment dialog for the chosen result
+  const handleMarkPaidFromSearch = useCallback((workbook) => {
+    setShowSearchPanel(false);
+    openPaymentDialogForWorkbook(workbook);
+  }, [openPaymentDialogForWorkbook]);
 
   // Toggle spending summary report
-  const toggleSpendingSummary = () => {
+  const toggleSpendingSummary = useCallback(() => {
     setShowSpendingSummary(prev => !prev);
-  };
+  }, []);
 
   // Toggle category manager
-  const toggleCategoryManager = () => {
+  const toggleCategoryManager = useCallback(() => {
     setShowCategoryManager(prev => !prev);
-  };
+  }, []);
 
   // Delete a category (and its descendants), then un-categorize any
   // workbook that referenced one of the removed categories
-  const handleDeleteCategory = (id) => {
+  const handleDeleteCategory = useCallback((id) => {
     const removedIds = deleteCategory(id);
     clearWorkbookCategoryReferences(removedIds);
-  };
+  }, [deleteCategory, clearWorkbookCategoryReferences]);
 
   // Move a workbook to a different category (or un-categorize it),
   // via drag-and-drop or the "Move to" select in the category manager
-  const handleMoveWorkbookToCategory = (workbookId, categoryId) => {
+  const handleMoveWorkbookToCategory = useCallback((workbookId, categoryId) => {
     updateWorkbook(workbookId, { categoryId });
-  };
+  }, [updateWorkbook]);
 
   // Toggle budget manager
-  const toggleBudgetManager = () => {
+  const toggleBudgetManager = useCallback(() => {
     setShowBudgetManager(prev => !prev);
-  };
+  }, []);
 
   // Delete a workbook, then detach it from any budget that referenced it
-  const handleDeleteWorkbook = (id) => {
+  const handleDeleteWorkbook = useCallback((id) => {
     deleteWorkbook(id);
     removeWorkbookFromBudgets(id);
-  };
+  }, [deleteWorkbook, removeWorkbookFromBudgets]);
 
   // Open the "add to budget/category" dialog for the workbook currently
   // loaded in the editor, saving it first if it hasn't been saved yet
-  const openOrganizeDialogForCurrent = () => {
+  const openOrganizeDialogForCurrent = useCallback(() => {
     const currentWorkbook = getCurrentWorkbookRecord();
     if (!currentWorkbook) return;
     setOrganizeTargetWorkbook(currentWorkbook);
     setShowOrganizeDialog(true);
-  };
+  }, [getCurrentWorkbookRecord]);
 
-  const closeOrganizeDialog = () => {
+  const closeOrganizeDialog = useCallback(() => {
     setShowOrganizeDialog(false);
     setOrganizeTargetWorkbook(null);
-  };
+  }, []);
 
-  const handleSetWorkbookCategory = (id, categoryId) => {
+  const handleSetWorkbookCategory = useCallback((id, categoryId) => {
     updateWorkbook(id, { categoryId });
-  };
+  }, [updateWorkbook]);
 
-  const handleToggleWorkbookBudget = (budget, shouldInclude) => {
+  const handleToggleWorkbookBudget = useCallback((budget, shouldInclude) => {
     if (!organizeTargetWorkbook) return;
     const currentIds = budget.workbookIds || [];
     const nextIds = shouldInclude
       ? [...currentIds, organizeTargetWorkbook.id]
       : currentIds.filter(id => id !== organizeTargetWorkbook.id);
     updateBudget(budget.id, { workbookIds: nextIds });
-  };
+  }, [organizeTargetWorkbook, updateBudget]);
 
   // Toggle QR code display
   const toggleQRCode = () => {
@@ -282,33 +325,40 @@ export default function HumanWebCalculator({
     }
   };
 
-  // Save current calculation to history
-  const saveToHistory = () => {
+  // Save current calculation to history. Reads text/total from refs (kept
+  // current every render) rather than closing over the state directly, so
+  // this callback's identity never changes - it always saves whatever the
+  // latest calculation is, without depending on it.
+  const saveToHistory = useCallback(() => {
     const now = new Date();
     const historyItem = {
       id: now.getTime().toString(),
-      content: text,
-      total: total,
+      content: textRef.current,
+      total: totalRef.current,
       date: now.toISOString(),
       displayDate: formatDate(now)
     };
 
-    const updatedHistory = [historyItem, ...calculationHistory].slice(0, 50); // Keep only the last 50 items
-    setCalculationHistory(updatedHistory);
-    localStorage.setItem('humanCalculatorHistory', JSON.stringify(updatedHistory));
-  };
+    setCalculationHistory(prev => {
+      const updatedHistory = [historyItem, ...prev].slice(0, 50); // Keep only the last 50 items
+      localStorage.setItem('humanCalculatorHistory', JSON.stringify(updatedHistory));
+      return updatedHistory;
+    });
+  }, []);
 
   // Load calculation from history
-  const loadFromHistory = (historyItem) => {
+  const loadFromHistory = useCallback((historyItem) => {
     setText(historyItem.content || "");
-  };
+  }, []);
 
   // Delete item from history
-  const deleteFromHistory = (id) => {
-    const updatedHistory = calculationHistory.filter(item => item.id !== id);
-    setCalculationHistory(updatedHistory);
-    localStorage.setItem('humanCalculatorHistory', JSON.stringify(updatedHistory));
-  };
+  const deleteFromHistory = useCallback((id) => {
+    setCalculationHistory(prev => {
+      const updatedHistory = prev.filter(item => item.id !== id);
+      localStorage.setItem('humanCalculatorHistory', JSON.stringify(updatedHistory));
+      return updatedHistory;
+    });
+  }, []);
 
   // Check if a line ends with an operator
 
@@ -451,31 +501,6 @@ export default function HumanWebCalculator({
     if (bannerRef.current) bannerRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [selectionResult]);
 
-  // Format a number with commas
-  const formatWithCommas = (number) => {
-    return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  };
-
-  // Format date for display in history
-  const formatDate = (date) => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    const dateToFormat = new Date(date);
-    const isToday = dateToFormat >= today;
-    const isYesterday = dateToFormat >= yesterday && dateToFormat < today;
-
-    if (isToday) {
-      return `Today at ${dateToFormat.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-    } else if (isYesterday) {
-      return `Yesterday at ${dateToFormat.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-    } else {
-      return dateToFormat.toLocaleDateString([], { month: 'short', day: 'numeric' }) +
-             ` at ${dateToFormat.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-    }
-  };
 
   // Build a "Category › Subcategory › ..." label for a workbook's category id
   const getCategoryLabel = (categoryId) => {
@@ -687,10 +712,7 @@ export default function HumanWebCalculator({
         categories={categories}
         onOpenWorkbook={loadWorkbook}
         onOpenHistory={loadFromHistory}
-        onMarkPaid={(workbook) => {
-          setShowSearchPanel(false);
-          openPaymentDialogForWorkbook(workbook);
-        }}
+        onMarkPaid={handleMarkPaidFromSearch}
         formatWithCommas={formatWithCommas}
       />
 

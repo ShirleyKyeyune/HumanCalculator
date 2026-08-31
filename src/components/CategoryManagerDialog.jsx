@@ -473,4 +473,7 @@ CategoryManagerDialog.propTypes = {
   onMoveWorkbook: PropTypes.func.isRequired
 };
 
-export default CategoryManagerDialog;
+// Memoized: this panel stays mounted for its slide-in/out animation even
+// while closed, so it must skip re-rendering when unrelated state changes
+// elsewhere in the app (e.g. every keystroke in the calculator textarea).
+export default React.memo(CategoryManagerDialog);
