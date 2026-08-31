@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { flattenTree, getChildren, getDescendantIds } from '../hooks/useCategories';
 import { computeBudgetSpent } from '../hooks/useBudgets';
+import { computeWorkbookTotal } from '../utils/workbookTotal';
 import AmountInput from './AmountInput';
 
 const UNCATEGORIZED_ID = '__uncategorized__';
@@ -45,7 +46,12 @@ function BudgetCategoryNode({ node, depth, expandedIds, onToggle, onOpenWorkbook
           <span className={`spending-expand-caret ${isExpanded ? 'expanded' : ''}`}>&#9656;</span>
           {node.name}
         </span>
-        <span className="spending-category-total">{formatWithCommas(node.paidTotal)}</span>
+        <span className="budget-node-totals">
+          <span className="budget-node-paid-total">{formatWithCommas(node.paidTotal)} paid</span>
+          {node.unpaidTotal > 0 && (
+            <span className="budget-node-pending-total">{formatWithCommas(node.unpaidTotal)} pending</span>
+          )}
+        </span>
       </button>
       <div className="spending-category-meta">
         <span>{node.paidCount} paid · {node.unpaidCount} unpaid</span>
@@ -64,7 +70,9 @@ function BudgetCategoryNode({ node, depth, expandedIds, onToggle, onOpenWorkbook
                   {wb.isPaid ? (
                     <span className="workbook-paid-badge paid">{formatWithCommas(wb.amountPaid || 0)}</span>
                   ) : (
-                    <span className="workbook-paid-badge unpaid">Unpaid</span>
+                    <span className="workbook-paid-badge unpaid">
+                      Unpaid &middot; {formatWithCommas(computeWorkbookTotal(wb.content))}
+                    </span>
                   )}
                   <button
                     type="button"
@@ -111,11 +119,10 @@ function BudgetDetail({ budget, workbooks, categories, onOpenWorkbook, onBack, f
     [budget, workbooks, categories]
   );
 
-  const { spent, count: paidCount } = useMemo(
+  const { spent, count: paidCount, pending, pendingCount, availableBalance } = useMemo(
     () => computeBudgetSpent(budget, workbooks, categories),
     [budget, workbooks, categories]
   );
-  const unpaidCount = matchedWorkbooks.length - paidCount;
 
   const roots = useMemo(() => {
     const buildNode = (nodeId, nodeName) => {
@@ -123,6 +130,7 @@ function BudgetDetail({ budget, workbooks, categories, onOpenWorkbook, onBack, f
         .filter(wb => (wb.categoryId || null) === nodeId)
         .sort((a, b) => new Date(b.paidAt || b.date) - new Date(a.paidAt || a.date));
       const paidItems = directItems.filter(wb => wb.isPaid);
+      const unpaidItems = directItems.filter(wb => !wb.isPaid);
 
       const children = getChildren(categories, nodeId)
         .map(child => buildNode(child.id, child.name))
@@ -130,11 +138,13 @@ function BudgetDetail({ budget, workbooks, categories, onOpenWorkbook, onBack, f
 
       const paidTotal = paidItems.reduce((sum, wb) => sum + (wb.amountPaid || 0), 0) +
         children.reduce((sum, c) => sum + c.paidTotal, 0);
+      const unpaidTotal = unpaidItems.reduce((sum, wb) => sum + computeWorkbookTotal(wb.content), 0) +
+        children.reduce((sum, c) => sum + c.unpaidTotal, 0);
       const paidCountNode = paidItems.length + children.reduce((sum, c) => sum + c.paidCount, 0);
-      const unpaidCountNode = (directItems.length - paidItems.length) + children.reduce((sum, c) => sum + c.unpaidCount, 0);
+      const unpaidCountNode = unpaidItems.length + children.reduce((sum, c) => sum + c.unpaidCount, 0);
       const itemCount = directItems.length + children.reduce((sum, c) => sum + c.itemCount, 0);
 
-      return { id: nodeId, name: nodeName, directItems, children, paidTotal, paidCount: paidCountNode, unpaidCount: unpaidCountNode, itemCount };
+      return { id: nodeId, name: nodeName, directItems, children, paidTotal, unpaidTotal, paidCount: paidCountNode, unpaidCount: unpaidCountNode, itemCount };
     };
 
     const categoryRoots = getChildren(categories, null)
@@ -146,19 +156,21 @@ function BudgetDetail({ budget, workbooks, categories, onOpenWorkbook, onBack, f
       .sort((a, b) => new Date(b.paidAt || b.date) - new Date(a.paidAt || a.date));
     if (uncategorizedItems.length > 0) {
       const paidItems = uncategorizedItems.filter(wb => wb.isPaid);
+      const unpaidItems = uncategorizedItems.filter(wb => !wb.isPaid);
       categoryRoots.push({
         id: UNCATEGORIZED_ID,
         name: 'Uncategorized',
         directItems: uncategorizedItems,
         children: [],
         paidTotal: paidItems.reduce((sum, wb) => sum + (wb.amountPaid || 0), 0),
+        unpaidTotal: unpaidItems.reduce((sum, wb) => sum + computeWorkbookTotal(wb.content), 0),
         paidCount: paidItems.length,
-        unpaidCount: uncategorizedItems.length - paidItems.length,
+        unpaidCount: unpaidItems.length,
         itemCount: uncategorizedItems.length
       });
     }
 
-    return categoryRoots.sort((a, b) => b.itemCount - a.itemCount);
+    return categoryRoots.sort((a, b) => (b.paidTotal + b.unpaidTotal) - (a.paidTotal + a.unpaidTotal));
   }, [matchedWorkbooks, categories]);
 
   const toggleExpanded = (id) => {
@@ -169,8 +181,9 @@ function BudgetDetail({ budget, workbooks, categories, onOpenWorkbook, onBack, f
     });
   };
 
-  const pct = budget.amount > 0 ? Math.min(100, (spent / budget.amount) * 100) : 0;
-  const isOver = spent > budget.amount;
+  const paidPct = budget.amount > 0 ? Math.min(100, (spent / budget.amount) * 100) : 0;
+  const pendingPct = budget.amount > 0 ? Math.min(100 - paidPct, (pending / budget.amount) * 100) : 0;
+  const isOver = availableBalance < 0;
 
   return (
     <div className="budget-detail">
@@ -178,22 +191,34 @@ function BudgetDetail({ budget, workbooks, categories, onOpenWorkbook, onBack, f
         &larr; Back to Budgets
       </button>
 
-      <div className="spending-summary-total">
-        <div>
-          <span className="spending-summary-total-label">{budget.name}</span>
-          <span className="spending-summary-total-value">
-            {formatWithCommas(spent)} <span className="budget-detail-limit">/ {formatWithCommas(budget.amount)}</span>
-          </span>
-        </div>
-        <span className="spending-summary-total-count">
-          {paidCount} paid &middot; {unpaidCount} unpaid
-        </span>
+      <div className="budget-detail-header">
+        <h4 className="budget-detail-name">{budget.name}</h4>
+        <span className="budget-detail-limit">Limit: {formatWithCommas(budget.amount)}</span>
       </div>
-      <div className="spending-category-bar-track">
-        <div
-          className={`spending-category-bar-fill ${isOver ? 'over-budget' : ''}`}
-          style={{ width: `${pct}%` }}
-        />
+
+      <div className="budget-stat-grid">
+        <div className="budget-stat-tile">
+          <span className="budget-stat-label">Paid</span>
+          <span className="budget-stat-value paid">{formatWithCommas(spent)}</span>
+          <span className="budget-stat-meta">{paidCount} item{paidCount === 1 ? '' : 's'}</span>
+        </div>
+        <div className="budget-stat-tile">
+          <span className="budget-stat-label">Pending</span>
+          <span className="budget-stat-value pending">{formatWithCommas(pending)}</span>
+          <span className="budget-stat-meta">{pendingCount} item{pendingCount === 1 ? '' : 's'}</span>
+        </div>
+        <div className="budget-stat-tile">
+          <span className="budget-stat-label">Available</span>
+          <span className={`budget-stat-value ${isOver ? 'over' : 'available'}`}>
+            {isOver ? `-${formatWithCommas(Math.abs(availableBalance))}` : formatWithCommas(availableBalance)}
+          </span>
+          <span className="budget-stat-meta">{isOver ? 'over budget' : 'balance left'}</span>
+        </div>
+      </div>
+
+      <div className="spending-category-bar-track budget-bar-track">
+        <div className="spending-category-bar-fill" style={{ width: `${paidPct}%` }} />
+        <div className="budget-bar-fill-pending" style={{ width: `${pendingPct}%` }} />
       </div>
 
       <div className="spending-summary-content budget-detail-content">
@@ -508,9 +533,10 @@ function BudgetManagerDialog({
 
             {budgetStats.length > 0 ? (
               <ul className="budget-list">
-                {budgetStats.map(({ budget, spent, count }) => {
-                  const pct = budget.amount > 0 ? Math.min(100, (spent / budget.amount) * 100) : 0;
-                  const isOver = spent > budget.amount;
+                {budgetStats.map(({ budget, spent, count, pending, pendingCount, availableBalance }) => {
+                  const paidPct = budget.amount > 0 ? Math.min(100, (spent / budget.amount) * 100) : 0;
+                  const pendingPct = budget.amount > 0 ? Math.min(100 - paidPct, (pending / budget.amount) * 100) : 0;
+                  const isOver = availableBalance < 0;
 
                   return (
                     <li key={budget.id} className="budget-item">
@@ -524,15 +550,21 @@ function BudgetManagerDialog({
                           {formatWithCommas(spent)} / {formatWithCommas(budget.amount)}
                         </span>
                       </button>
-                      <div className="spending-category-bar-track">
-                        <div
-                          className={`spending-category-bar-fill ${isOver ? 'over-budget' : ''}`}
-                          style={{ width: `${pct}%` }}
-                        />
+                      <div className="spending-category-bar-track budget-bar-track">
+                        <div className="spending-category-bar-fill" style={{ width: `${paidPct}%` }} />
+                        <div className="budget-bar-fill-pending" style={{ width: `${pendingPct}%` }} />
                       </div>
                       <div className="spending-category-meta">
-                        <span>{count} paid item{count === 1 ? '' : 's'}</span>
-                        <span>{isOver ? 'Over budget' : `${(100 - pct).toFixed(0)}% left`}</span>
+                        <span>{count} paid &middot; {pendingCount} unpaid</span>
+                        <span>Pending: {formatWithCommas(pending)}</span>
+                      </div>
+                      <div className="spending-category-meta">
+                        <span />
+                        <span className={isOver ? 'budget-available-over' : 'budget-available-ok'}>
+                          {isOver
+                            ? `${formatWithCommas(Math.abs(availableBalance))} over budget`
+                            : `${formatWithCommas(availableBalance)} available`}
+                        </span>
                       </div>
                       <div className="workbook-actions budget-item-actions">
                         <button onClick={() => handleView(budget)} className="workbook-action-button mark-paid">
@@ -583,6 +615,7 @@ const budgetCategoryNodeShape = PropTypes.shape({
   directItems: PropTypes.arrayOf(workbookShape).isRequired,
   children: PropTypes.array.isRequired,
   paidTotal: PropTypes.number.isRequired,
+  unpaidTotal: PropTypes.number.isRequired,
   paidCount: PropTypes.number.isRequired,
   unpaidCount: PropTypes.number.isRequired,
   itemCount: PropTypes.number.isRequired

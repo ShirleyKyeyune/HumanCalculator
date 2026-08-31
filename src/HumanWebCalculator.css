@@ -2677,9 +2677,9 @@ body {
 .budget-panel {
   position: fixed;
   top: 0;
-  right: -520px;
-  width: 520px;
-  max-width: 92vw;
+  right: -720px;
+  width: 720px;
+  max-width: 94vw;
   height: 100vh;
   background-color: white;
   box-shadow: -2px 0 10px rgba(0, 0, 0, 0.2);
@@ -2862,4 +2862,163 @@ body {
 
 .budget-detail-content {
   margin-top: 1rem;
+}
+
+.budget-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.budget-detail-name {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+/* Paid / Pending / Available stat tiles */
+.budget-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.budget-stat-tile {
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background-color: #f8fafc;
+}
+
+.dark .budget-stat-tile {
+  background-color: #364154;
+}
+
+.budget-stat-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #718096;
+}
+
+.dark .budget-stat-label {
+  color: #a0aec0;
+}
+
+.budget-stat-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0.125rem 0;
+}
+
+.budget-stat-value.paid {
+  color: #6b46c1;
+}
+
+.dark .budget-stat-value.paid {
+  color: #d6bcfa;
+}
+
+.budget-stat-value.pending {
+  color: #dd6b20;
+}
+
+.dark .budget-stat-value.pending {
+  color: #f6ad55;
+}
+
+.budget-stat-value.available {
+  color: #38a169;
+}
+
+.dark .budget-stat-value.available {
+  color: #68d391;
+}
+
+.budget-stat-value.over {
+  color: #e53e3e;
+}
+
+.dark .budget-stat-value.over {
+  color: #fc8181;
+}
+
+.budget-stat-meta {
+  font-size: 0.75rem;
+  color: #718096;
+}
+
+.dark .budget-stat-meta {
+  color: #a0aec0;
+}
+
+/* Two-segment (paid + pending) progress bar, used in both the budget list
+   and the detail view */
+.budget-bar-track {
+  display: flex;
+}
+
+.budget-bar-track .spending-category-bar-fill {
+  border-radius: 0;
+  flex-shrink: 0;
+}
+
+.budget-bar-fill-pending {
+  height: 100%;
+  flex-shrink: 0;
+  background-color: #f6ad55;
+}
+
+.dark .budget-bar-fill-pending {
+  background-color: #dd6b20;
+}
+
+.budget-available-ok {
+  color: #38a169;
+  font-weight: 600;
+}
+
+.dark .budget-available-ok {
+  color: #68d391;
+}
+
+.budget-available-over {
+  color: #e53e3e;
+  font-weight: 600;
+}
+
+.dark .budget-available-over {
+  color: #fc8181;
+}
+
+/* Category/subcategory node totals in the budget detail tree */
+.budget-node-totals {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+
+.budget-node-paid-total {
+  font-weight: 700;
+  color: #6b46c1;
+}
+
+.dark .budget-node-paid-total {
+  color: #d6bcfa;
+}
+
+.budget-node-pending-total {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #dd6b20;
+}
+
+.dark .budget-node-pending-total {
+  color: #f6ad55;
 }

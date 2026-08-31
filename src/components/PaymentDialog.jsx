@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
-import calculatorService from '../services/calculatorService';
 import AmountInput from './AmountInput';
 import CategoryPicker from './CategoryPicker';
+import { computeWorkbookTotal } from '../utils/workbookTotal';
 
 const pad = (n) => String(n).padStart(2, '0');
 
@@ -19,21 +19,6 @@ const formatDateTimeForDisplay = (date) =>
     hour: 'numeric',
     minute: '2-digit',
   });
-
-/**
- * Compute the total value of a workbook's content, independent of whichever
- * workbook is currently loaded in the editor.
- */
-const computeWorkbookTotal = (content) => {
-  if (!content || !content.trim()) return 0;
-  try {
-    const processedLines = calculatorService.processInput(content);
-    return processedLines.reduce((sum, line) => sum + (line.value || 0), 0);
-  } catch (error) {
-    console.error('Error computing workbook total:', error);
-    return 0;
-  }
-};
 
 /**
  * PaymentDialog Component

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getDescendantIds } from './useCategories';
 import { isWithinRange } from '../utils/dateRange';
+import { computeWorkbookTotal } from '../utils/workbookTotal';
 
 const STORAGE_KEY = 'humanCalculatorBudgets';
 
@@ -68,28 +69,56 @@ function useBudgets() {
   return { budgets, addBudget, updateBudget, deleteBudget, removeWorkbookFromBudgets };
 }
 
-/**
- * Compute what's been spent against a budget: paid workbooks that are
- * either explicitly attached, or fall under one of the budget's categories
- * (rolled up through all subcategory levels), within the budget's period.
- */
-export const computeBudgetSpent = (budget, workbooks, categories) => {
+/** This budget's scope: any category it tracks, plus all their subcategories. */
+const getBudgetScopeIds = (budget, categories) => {
   const scopeIds = new Set();
   (budget.categoryIds || []).forEach(catId => {
     getDescendantIds(categories, catId).forEach(id => scopeIds.add(id));
   });
+  return scopeIds;
+};
 
-  const matched = (workbooks || []).filter(wb => {
-    if (!wb.isPaid) return false;
-    if (!isWithinRange(wb.paidAt, budget.period, budget.customFrom, budget.customTo)) return false;
+/** Whether a workbook belongs to a budget - explicitly attached, or filed under its category scope. */
+const isWorkbookInBudgetScope = (wb, budget, scopeIds) => {
+  const explicitlyIncluded = (budget.workbookIds || []).includes(wb.id);
+  const categoryIncluded = wb.categoryId && scopeIds.has(wb.categoryId);
+  return explicitlyIncluded || categoryIncluded;
+};
 
-    const explicitlyIncluded = (budget.workbookIds || []).includes(wb.id);
-    const categoryIncluded = wb.categoryId && scopeIds.has(wb.categoryId);
-    return explicitlyIncluded || categoryIncluded;
-  });
+/**
+ * Compute a budget's full picture: what's been spent (paid workbooks in
+ * scope, within the budget's period), what's still pending (unpaid
+ * workbooks in scope, valued at their calculated total), and what's left
+ * available against the limit once both are accounted for.
+ */
+export const computeBudgetSpent = (budget, workbooks, categories) => {
+  const scopeIds = getBudgetScopeIds(budget, categories);
 
-  const spent = matched.reduce((sum, wb) => sum + (wb.amountPaid || 0), 0);
-  return { spent, count: matched.length, workbooks: matched };
+  const paidMatched = (workbooks || []).filter(wb =>
+    wb.isPaid &&
+    isWithinRange(wb.paidAt, budget.period, budget.customFrom, budget.customTo) &&
+    isWorkbookInBudgetScope(wb, budget, scopeIds)
+  );
+
+  // Unpaid items aren't tied to the period (they have no paid date yet) -
+  // "pending" is everything currently unpaid and in scope, regardless of
+  // when it might eventually be paid.
+  const unpaidMatched = (workbooks || []).filter(wb =>
+    !wb.isPaid && isWorkbookInBudgetScope(wb, budget, scopeIds)
+  );
+
+  const spent = paidMatched.reduce((sum, wb) => sum + (wb.amountPaid || 0), 0);
+  const pending = unpaidMatched.reduce((sum, wb) => sum + computeWorkbookTotal(wb.content), 0);
+
+  return {
+    spent,
+    count: paidMatched.length,
+    workbooks: paidMatched,
+    pending,
+    pendingCount: unpaidMatched.length,
+    pendingWorkbooks: unpaidMatched,
+    availableBalance: budget.amount - spent - pending
+  };
 };
 
 export default useBudgets;
