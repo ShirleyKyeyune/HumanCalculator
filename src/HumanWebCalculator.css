@@ -342,7 +342,7 @@ body {
   border-color: #4a5568;
 }
 
-.calculator-collapsed-panel > div {
+.calculator-collapsed-panel>div {
   display: grid;
   gap: 0.25rem;
 }
@@ -470,13 +470,16 @@ body {
 .history-panel {
   position: fixed;
   top: 0;
-  right: -320px; /* Start off-screen on the right */
+  right: -320px;
+  /* Start off-screen on the right */
   width: 320px;
   height: 100vh;
   background-color: white;
-  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.2); /* Shadow on the left side */
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.2);
+  /* Shadow on the left side */
   z-index: 1000;
-  transition: right 0.3s ease; /* Transition right property instead of left */
+  transition: right 0.3s ease;
+  /* Transition right property instead of left */
   display: flex;
   flex-direction: column;
 }
@@ -487,7 +490,8 @@ body {
 }
 
 .history-panel.show {
-  right: 0; /* Show by sliding in from the right */
+  right: 0;
+  /* Show by sliding in from the right */
 }
 
 .history-panel-header {
@@ -693,7 +697,8 @@ body {
 .search-panel {
   position: fixed;
   top: 0;
-  right: -320px; /* Start off-screen on the right */
+  right: -320px;
+  /* Start off-screen on the right */
   width: 320px;
   height: 100vh;
   background-color: white;
@@ -2421,15 +2426,29 @@ body {
   border-left-color: #4a5568;
 }
 
-/* Category manager styles */
-.category-manager-dialog {
-  max-width: 560px;
+/* Category manager - large right-docked, full-height panel */
+.category-manager-panel {
+  position: fixed;
+  top: 0;
+  right: -520px;
+  width: 520px;
+  max-width: 92vw;
+  height: 100vh;
+  background-color: white;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  transition: right 0.3s ease;
+  display: flex;
+  flex-direction: column;
 }
 
-.category-manager-content {
-  max-height: 400px;
-  overflow-y: auto;
-  margin-bottom: 1rem;
+.dark .category-manager-panel {
+  background-color: #2d3748;
+  color: white;
+}
+
+.category-manager-panel.show {
+  right: 0;
 }
 
 .category-tree-root,
@@ -2437,6 +2456,10 @@ body {
   list-style: none;
   padding: 0;
   margin: 0;
+}
+
+.category-tree-root {
+  margin-bottom: 0.75rem;
 }
 
 .category-tree-children {
@@ -2455,10 +2478,41 @@ body {
   padding: 0.5rem 0.625rem;
   border-radius: 0.375rem;
   background-color: #f8fafc;
+  border: 2px solid transparent;
+  transition: background-color 0.15s, border-color 0.15s;
 }
 
 .dark .category-tree-row {
   background-color: #364154;
+}
+
+.category-tree-row.drag-over {
+  border-color: #9f7aea;
+  background-color: #f3e8ff;
+}
+
+.dark .category-tree-row.drag-over {
+  border-color: #d6bcfa;
+  background-color: #44337a;
+}
+
+.category-tree-name-group {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.category-tree-expand-button {
+  flex-shrink: 0;
+  padding: 0.125rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  color: inherit;
 }
 
 .category-tree-name {
@@ -2467,6 +2521,21 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.category-tree-count-badge {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.0625rem 0.4rem;
+  border-radius: 9999px;
+  background-color: #e9d8fd;
+  color: #553c9a;
+}
+
+.dark .category-tree-count-badge {
+  background-color: #44337a;
+  color: #d6bcfa;
 }
 
 .category-tree-actions {
@@ -2539,6 +2608,69 @@ body {
 
 .dark .category-manager-add-root {
   border-top-color: #4a5568;
+}
+
+.category-tree-workbook-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.25rem 0 0.375rem;
+}
+
+.category-tree-workbook-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.625rem;
+  margin-bottom: 0.25rem;
+  border-radius: 0.375rem;
+  background-color: white;
+  border: 1px solid #e2e8f0;
+  cursor: grab;
+}
+
+.category-tree-workbook-row:active {
+  cursor: grabbing;
+}
+
+.dark .category-tree-workbook-row {
+  background-color: #2d3748;
+  border-color: #4a5568;
+}
+
+.category-tree-workbook-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.category-tree-workbook-date {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  color: #718096;
+}
+
+.dark .category-tree-workbook-date {
+  color: #a0aec0;
+}
+
+.category-tree-workbook-move-select {
+  flex-shrink: 0;
+  max-width: 140px;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.375rem;
+  border-radius: 0.25rem;
+  border: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+  color: inherit;
+  cursor: pointer;
+}
+
+.dark .category-tree-workbook-move-select {
+  background-color: #364154;
+  border-color: #4a5568;
 }
 
 /* Budgets - large right-docked, full-height panel */

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { flattenTree } from '../hooks/useCategories';
 import { computeBudgetSpent } from '../hooks/useBudgets';
@@ -192,6 +192,14 @@ function BudgetManagerDialog({
   const [mode, setMode] = useState('list');
   const [editingBudget, setEditingBudget] = useState(null);
 
+  // Only recompute spend-per-budget when the underlying data actually
+  // changes, not on every render this (always-mounted, for the slide
+  // animation) panel happens to pick up from unrelated state elsewhere.
+  const budgetStats = useMemo(
+    () => budgets.map(budget => ({ budget, ...computeBudgetSpent(budget, workbooks, categories) })),
+    [budgets, workbooks, categories]
+  );
+
   const handleCreate = () => {
     setEditingBudget(null);
     setMode('form');
@@ -246,10 +254,9 @@ function BudgetManagerDialog({
               + New Budget
             </button>
 
-            {budgets.length > 0 ? (
+            {budgetStats.length > 0 ? (
               <ul className="budget-list">
-                {budgets.map(budget => {
-                  const { spent, count } = computeBudgetSpent(budget, workbooks, categories);
+                {budgetStats.map(({ budget, spent, count }) => {
                   const pct = budget.amount > 0 ? Math.min(100, (spent / budget.amount) * 100) : 0;
                   const isOver = spent > budget.amount;
 

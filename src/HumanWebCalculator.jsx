@@ -182,6 +182,12 @@ export default function HumanWebCalculator({
     clearWorkbookCategoryReferences(removedIds);
   };
 
+  // Move a workbook to a different category (or un-categorize it),
+  // via drag-and-drop or the "Move to" select in the category manager
+  const handleMoveWorkbookToCategory = (workbookId, categoryId) => {
+    updateWorkbook(workbookId, { categoryId });
+  };
+
   // Toggle budget manager
   const toggleBudgetManager = () => {
     setShowBudgetManager(prev => !prev);
@@ -719,6 +725,7 @@ export default function HumanWebCalculator({
         onAddCategory={addCategory}
         onRenameCategory={renameCategory}
         onDeleteCategory={handleDeleteCategory}
+        onMoveWorkbook={handleMoveWorkbookToCategory}
       />
 
       {/* Budget Manager */}
