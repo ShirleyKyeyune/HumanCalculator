@@ -421,21 +421,58 @@ body {
   background-color: #2d3748;
 }
 
-.workbook-name-input {
+.workbook-name-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   flex: 1;
   min-width: 150px;
-  padding: 0.5rem;
+  max-width: 320px;
+  padding: 0.5rem 0.75rem;
   border: 1px solid #e2e8f0;
   border-radius: 0.25rem;
   font-size: 1rem;
+  font-family: inherit;
   color: #1a202c;
   background-color: #f7fafc;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
 }
 
-.dark .workbook-name-input {
+.workbook-name-button:hover,
+.workbook-name-button:focus-visible {
+  background-color: #edf2f7;
+  border-color: #cbd5e0;
+}
+
+.workbook-name-button .button-icon {
+  flex-shrink: 0;
+  stroke: #6b46c1;
+}
+
+.workbook-name-button-text {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dark .workbook-name-button {
   background-color: #4a5568;
   border-color: #4a5568;
   color: #e2e8f0;
+}
+
+.dark .workbook-name-button:hover,
+.dark .workbook-name-button:focus-visible {
+  background-color: #2d3748;
+  border-color: #2d3748;
+}
+
+.dark .workbook-name-button .button-icon {
+  stroke: #d6bcfa;
 }
 
 .workbook-buttons {

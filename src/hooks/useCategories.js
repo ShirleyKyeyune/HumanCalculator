@@ -160,30 +160,53 @@ function useCategories() {
 
   /**
    * Create fresh, empty copies of existing categories - same name and
-   * position in the tree, brand-new ids, zero workbooks attached - so a
-   * budget that "selects" an existing category gets its own isolated copy
+   * shape in the tree, brand-new ids, zero workbooks attached - so a budget
+   * that "selects" an existing category gets its own fully isolated copy
    * instead of inheriting whatever is already filed under the original.
+   *
+   * Isolation has to go both ways: cloning just the selected node while
+   * keeping its original parentId would leave the clone nested under the
+   * *shared* original ancestor - which any other budget tracking that
+   * ancestor would then also see (getChildren/getDescendantIds walk
+   * downward through parentId, so a clone parented there is indistinguishable
+   * from a "real" child of it). So the whole ancestor chain gets cloned too,
+   * each level reused across the batch (memoized by original id) so
+   * checking both a parent and its child clones them under the same new
+   * parent rather than twice.
+   *
    * Batches every clone into a single persist so cloning several at once
    * (from one form submit) doesn't drop any of them to a stale closure.
-   * @returns {Object} mapping of original id -> new cloned id
+   * @returns {Object} mapping of original id -> new cloned id (includes
+   *   ancestors pulled in along the way, not just the ids passed in)
    */
   const cloneCategoriesAsEmpty = useCallback((ids) => {
     const byId = new Map(categories.map(c => [c.id, c]));
     const clones = [];
     const mapping = {};
-    ids.forEach((id, i) => {
+    let counter = 0;
+
+    const cloneWithAncestors = (id) => {
+      if (mapping[id]) return mapping[id];
       const source = byId.get(id);
-      if (!source) return;
-      const newCategory = {
-        id: `cat-${Date.now()}-${Math.random().toString(36).slice(2, 7)}-${i}`,
+      if (!source) return null;
+
+      const newParentId = source.parentId ? cloneWithAncestors(source.parentId) : null;
+      const newId = `cat-${Date.now()}-${Math.random().toString(36).slice(2, 7)}-${counter}`;
+      counter += 1;
+
+      clones.push({
+        id: newId,
         name: source.name,
-        parentId: source.parentId,
+        parentId: newParentId,
         color: source.color || null,
         limit: source.limit ?? null
-      };
-      clones.push(newCategory);
-      mapping[id] = newCategory.id;
-    });
+      });
+      mapping[id] = newId;
+      return newId;
+    };
+
+    ids.forEach(id => cloneWithAncestors(id));
+
     if (clones.length > 0) {
       persist([...categories, ...clones]);
     }

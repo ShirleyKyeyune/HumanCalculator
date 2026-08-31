@@ -476,7 +476,19 @@ function BudgetDetail({
     // (even empty ones, so they can be populated), plus any that happen to
     // contain matched items despite not being tracked directly (e.g. a
     // workbook explicitly attached under an otherwise-untracked category).
+    // A tracked id can itself be a subcategory (e.g. a cloned one nested
+    // under a freshly-cloned, still-empty parent) - walk up to also mark
+    // every ancestor as tracked, so that empty parent stays reachable
+    // instead of hiding the very node the budget actually tracks.
+    const byId = new Map(categories.map(c => [c.id, c]));
     const trackedIds = new Set(budget.categoryIds || []);
+    (budget.categoryIds || []).forEach(id => {
+      let current = byId.get(id);
+      while (current && current.parentId) {
+        trackedIds.add(current.parentId);
+        current = byId.get(current.parentId);
+      }
+    });
     const categoryRoots = getChildren(categories, null)
       .map(c => buildNode(c.id, c.name, c.color, c.limit))
       .filter(node => node.itemCount > 0 || trackedIds.has(node.id));

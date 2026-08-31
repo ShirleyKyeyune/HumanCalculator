@@ -31,13 +31,16 @@ function App() {
           <h1 className="App-title">Human Calculator</h1>
         </div>
         <div className="App-header-right">
-          <input
-            type="text"
-            value={workbookName}
-            onChange={(e) => setWorkbookName(e.target.value)}
-            className="workbook-name-input"
-            aria-label="Workbook name"
-          />
+          <button
+            type="button"
+            className="workbook-name-button"
+            onClick={() => setShowSaveDialog(true)}
+            title="Save or rename this workbook"
+            aria-label={`Save or rename workbook, currently named ${workbookName}`}
+          >
+            <SaveIcon className="button-icon" />
+            <span className="workbook-name-button-text">{workbookName}</span>
+          </button>
           <div className="workbook-buttons">
             <ToolbarMenu
               label="Workbook"
