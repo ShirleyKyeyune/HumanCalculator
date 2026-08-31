@@ -2828,3 +2828,38 @@ body {
 .budget-item-actions {
   margin-top: 0.5rem;
 }
+
+/* Budget detail (drill-down) view */
+.budget-detail-back {
+  display: inline-block;
+  margin-bottom: 1rem;
+  padding: 0;
+  background: none;
+  border: none;
+  color: #6b46c1;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.budget-detail-back:hover {
+  text-decoration: underline;
+}
+
+.dark .budget-detail-back {
+  color: #d6bcfa;
+}
+
+.budget-detail-limit {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #718096;
+}
+
+.dark .budget-detail-limit {
+  color: #a0aec0;
+}
+
+.budget-detail-content {
+  margin-top: 1rem;
+}

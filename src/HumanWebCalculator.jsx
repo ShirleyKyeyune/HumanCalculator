@@ -760,6 +760,7 @@ export default function HumanWebCalculator({
         onAddBudget={addBudget}
         onUpdateBudget={updateBudget}
         onDeleteBudget={deleteBudget}
+        onOpenWorkbook={loadWorkbook}
         formatWithCommas={formatWithCommas}
       />
 
