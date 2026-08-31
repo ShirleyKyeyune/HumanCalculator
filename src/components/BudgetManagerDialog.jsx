@@ -22,7 +22,7 @@ const RECENT_WORKBOOK_WINDOW_MS = RECENT_WORKBOOK_DAYS * 24 * 60 * 60 * 1000;
  * this narrows down to recently modified workbooks only - keeping the list
  * (and every keystroke's filter pass) cheap regardless of total volume.
  */
-function InlineWorkbookPicker({ workbooks, excludeIds, onSelect, onCancel, onCreateNew }) {
+function InlineWorkbookPicker({ workbooks, excludeIds, onSelect, onCancel, onCreateNew, isAdding }) {
   const [search, setSearch] = useState('');
   const q = search.trim().toLowerCase();
 
@@ -46,6 +46,7 @@ function InlineWorkbookPicker({ workbooks, excludeIds, onSelect, onCancel, onCre
         placeholder="Search workbooks by name..."
         className="dialog-input"
         autoFocus
+        disabled={isAdding}
       />
       <div className="budget-checklist">
         {options.length > 0 ? (
@@ -55,9 +56,12 @@ function InlineWorkbookPicker({ workbooks, excludeIds, onSelect, onCancel, onCre
               type="button"
               className="budget-checklist-item budget-checklist-pick"
               onClick={() => onSelect(wb)}
+              disabled={isAdding}
             >
               <span className="budget-checklist-workbook-name">{wb.name}</span>
-              <span className="budget-checklist-workbook-meta">{wb.displayDate}</span>
+              <span className="budget-checklist-workbook-meta">
+                {isAdding ? 'Adding...' : wb.displayDate}
+              </span>
             </button>
           ))
         ) : (
@@ -69,10 +73,10 @@ function InlineWorkbookPicker({ workbooks, excludeIds, onSelect, onCancel, onCre
         )}
       </div>
       <div className="budget-add-workbook-picker-actions">
-        <button type="button" className="budget-create-workbook-button" onClick={onCreateNew}>
+        <button type="button" className="budget-create-workbook-button" onClick={onCreateNew} disabled={isAdding}>
           + Create New Workbook
         </button>
-        <button type="button" className="category-cancel-button" onClick={onCancel}>
+        <button type="button" className="category-cancel-button" onClick={onCancel} disabled={isAdding}>
           Cancel
         </button>
       </div>
@@ -179,6 +183,12 @@ function BudgetCategoryNode({
   const [isSettingLimit, setIsSettingLimit] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editName, setEditName] = useState(node.name);
+  // Attaching/unlinking a workbook touches both the category record and the
+  // budget's own workbookIds list - guard against a rapid double-click
+  // firing it twice, and hold a brief visible "busy" state on the row so
+  // the action doesn't look like it silently did nothing.
+  const [isAddWorkbookPending, setIsAddWorkbookPending] = useState(false);
+  const [pendingWorkbookId, setPendingWorkbookId] = useState(null);
 
   const isExpanded = expandedIds.has(node.id);
   const isUncategorized = node.id === UNCATEGORIZED_ID;
@@ -219,17 +229,25 @@ function BudgetCategoryNode({
   };
 
   const handleUnlinkCategory = (wb) => {
+    if (pendingWorkbookId) return;
+    setPendingWorkbookId(wb.id);
     onSetWorkbookCategory(wb.id, null);
+    setTimeout(() => setPendingWorkbookId(null), 400);
   };
 
   const isExplicitlyAttached = (wb) => (budget.workbookIds || []).includes(wb.id);
 
   const handleUnlinkBudget = (wb) => {
+    if (pendingWorkbookId) return;
+    setPendingWorkbookId(wb.id);
     const nextIds = (budget.workbookIds || []).filter(id => id !== wb.id);
     onUpdateBudget(budget.id, { workbookIds: nextIds });
+    setTimeout(() => setPendingWorkbookId(null), 400);
   };
 
   const handleAddWorkbook = (wb) => {
+    if (isAddWorkbookPending) return;
+    setIsAddWorkbookPending(true);
     if (!isUncategorized) {
       onSetWorkbookCategory(wb.id, node.id);
     }
@@ -237,7 +255,10 @@ function BudgetCategoryNode({
     if (!currentIds.includes(wb.id)) {
       onUpdateBudget(budget.id, { workbookIds: [...currentIds, wb.id] });
     }
-    setIsAddingWorkbook(false);
+    setTimeout(() => {
+      setIsAddWorkbookPending(false);
+      setIsAddingWorkbook(false);
+    }, 400);
   };
 
   const excludeIds = useMemo(() => new Set(node.directItems.map(wb => wb.id)), [node.directItems]);
@@ -397,6 +418,7 @@ function BudgetCategoryNode({
             onSelect={handleAddWorkbook}
             onCancel={() => setIsAddingWorkbook(false)}
             onCreateNew={onCreateWorkbook}
+            isAdding={isAddWorkbookPending}
           />
         </div>
       )}
@@ -407,11 +429,12 @@ function BudgetCategoryNode({
             <ul className="spending-workbook-list">
               {node.directItems.map(wb => {
                 const { paid, remaining, status } = getPaymentStatus(wb);
+                const isBusy = pendingWorkbookId === wb.id;
                 return (
                   <li
                     key={wb.id}
-                    className="spending-workbook-row clickable"
-                    onClick={() => onQuickView(wb)}
+                    className={`spending-workbook-row clickable ${isBusy ? 'busy' : ''}`}
+                    onClick={() => { if (!isBusy) onQuickView(wb); }}
                   >
                     <div className="spending-workbook-info">
                       <span className="spending-workbook-name">{wb.name}</span>
@@ -428,41 +451,47 @@ function BudgetCategoryNode({
                         Unpaid &middot; {formatWithCommas(remaining)}
                       </span>
                     )}
-                    <button
-                      type="button"
-                      className="workbook-quick-view-trigger"
-                      onClick={(e) => { e.stopPropagation(); onQuickView(wb); }}
-                      title="Quick view"
-                      aria-label={`Quick view ${wb.name}`}
-                    >
-                      &#128065;
-                    </button>
-                    <ActionMenu
-                      label={`Actions for ${wb.name}`}
-                      items={[
-                        {
-                          key: 'open',
-                          label: 'Open',
-                          onClick: () => onOpenWorkbook(wb)
-                        },
-                        {
-                          key: 'mark-paid',
-                          label: status === 'paid' ? 'Edit Payment' : status === 'partial' ? 'Record Payment' : 'Mark as Paid',
-                          onClick: () => onMarkPaid(wb)
-                        },
-                        !isUncategorized && {
-                          key: 'untag',
-                          label: 'Untag (remove from category)',
-                          onClick: () => handleUnlinkCategory(wb)
-                        },
-                        isExplicitlyAttached(wb) && {
-                          key: 'unlink',
-                          label: 'Unlink (remove from budget)',
-                          danger: true,
-                          onClick: () => handleUnlinkBudget(wb)
-                        }
-                      ]}
-                    />
+                    {isBusy ? (
+                      <span className="row-busy-spinner" role="status" aria-label="Updating..." />
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          className="workbook-quick-view-trigger"
+                          onClick={(e) => { e.stopPropagation(); onQuickView(wb); }}
+                          title="Quick view"
+                          aria-label={`Quick view ${wb.name}`}
+                        >
+                          &#128065;
+                        </button>
+                        <ActionMenu
+                          label={`Actions for ${wb.name}`}
+                          items={[
+                            {
+                              key: 'open',
+                              label: 'Open',
+                              onClick: () => onOpenWorkbook(wb)
+                            },
+                            {
+                              key: 'mark-paid',
+                              label: status === 'paid' ? 'Edit Payment' : status === 'partial' ? 'Record Payment' : 'Mark as Paid',
+                              onClick: () => onMarkPaid(wb)
+                            },
+                            !isUncategorized && {
+                              key: 'untag',
+                              label: 'Untag (remove from category)',
+                              onClick: () => handleUnlinkCategory(wb)
+                            },
+                            isExplicitlyAttached(wb) && {
+                              key: 'unlink',
+                              label: 'Unlink (remove from budget)',
+                              danger: true,
+                              onClick: () => handleUnlinkBudget(wb)
+                            }
+                          ]}
+                        />
+                      </>
+                    )}
                   </li>
                 );
               })}
@@ -530,6 +559,10 @@ function BudgetDetail({
   const [isAddingRootCategory, setIsAddingRootCategory] = useState(false);
   const [newRootCategoryName, setNewRootCategoryName] = useState('');
   const [isAddingWorkbook, setIsAddingWorkbook] = useState(false);
+  // Guard + brief visible "busy" state so attaching a workbook doesn't look
+  // like it silently did nothing, and a rapid double-click can't attach it
+  // twice.
+  const [isAddWorkbookPending, setIsAddWorkbookPending] = useState(false);
   const [isImportingBudget, setIsImportingBudget] = useState(false);
   // Cloning a whole category subtree can mean several localStorage writes
   // in a row - guard + disable the picker while it runs so a rapid
@@ -665,11 +698,16 @@ function BudgetDetail({
   };
 
   const handleAddUnfiledWorkbook = (wb) => {
+    if (isAddWorkbookPending) return;
+    setIsAddWorkbookPending(true);
     const currentIds = budget.workbookIds || [];
     if (!currentIds.includes(wb.id)) {
       onUpdateBudget(budget.id, { workbookIds: [...currentIds, wb.id] });
     }
-    setIsAddingWorkbook(false);
+    setTimeout(() => {
+      setIsAddWorkbookPending(false);
+      setIsAddingWorkbook(false);
+    }, 400);
   };
 
   // Cloning (rather than reusing the source budget's category ids directly)
@@ -792,6 +830,7 @@ function BudgetDetail({
           onSelect={handleAddUnfiledWorkbook}
           onCancel={() => setIsAddingWorkbook(false)}
           onCreateNew={onCreateWorkbook}
+          isAdding={isAddWorkbookPending}
         />
       )}
 
@@ -1299,7 +1338,12 @@ InlineWorkbookPicker.propTypes = {
   excludeIds: PropTypes.instanceOf(Set).isRequired,
   onSelect: PropTypes.func.isRequired,
   onCancel: PropTypes.func.isRequired,
-  onCreateNew: PropTypes.func.isRequired
+  onCreateNew: PropTypes.func.isRequired,
+  isAdding: PropTypes.bool
+};
+
+InlineWorkbookPicker.defaultProps = {
+  isAdding: false
 };
 
 InlineBudgetPicker.propTypes = {
