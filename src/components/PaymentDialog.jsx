@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
-import AmountInput from './AmountInput';
+import AmountInput, { parseAmountValue } from './AmountInput';
 import CategoryPicker from './CategoryPicker';
 import { computeWorkbookTotal } from '../utils/workbookTotal';
 
@@ -69,7 +69,7 @@ function PaymentDialog({
 
   const computeNewPaymentAmount = () => {
     if (amountMode === 'full') return remaining;
-    const parsed = parseFloat(customAmount);
+    const parsed = parseAmountValue(customAmount);
     return Number.isFinite(parsed) ? parsed : 0;
   };
 
@@ -181,7 +181,7 @@ function PaymentDialog({
             <AmountInput
               value={customAmount}
               onChange={setCustomAmount}
-              placeholder="Enter amount paid"
+              placeholder="Enter amount paid (e.g. 10K, 1.2M)"
               className="dialog-input"
               autoFocus
             />

@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { flattenTree, getChildren, getDescendantIds, getDepth, MAX_DEPTH } from '../hooks/useCategories';
 import { computeBudgetSpent } from '../hooks/useBudgets';
 import { getPaymentStatus } from '../utils/workbookTotal';
-import AmountInput from './AmountInput';
+import AmountInput, { parseAmountValue } from './AmountInput';
 import ActionMenu from './ActionMenu';
 import ColorSwatchPicker from './ColorSwatchPicker';
 import CategoryLimitEditor from './CategoryLimitEditor';
@@ -890,7 +890,7 @@ function BudgetForm({ initialBudget, categories, workbooks, onSave, onCancel, on
 
   const handleSubmit = () => {
     if (isSubmitting) return;
-    const parsedAmount = parseFloat(amount);
+    const parsedAmount = parseAmountValue(amount);
     if (!name.trim() || !Number.isFinite(parsedAmount)) return;
     setIsSubmitting(true);
 
@@ -931,7 +931,7 @@ function BudgetForm({ initialBudget, categories, workbooks, onSave, onCancel, on
       <AmountInput
         value={amount}
         onChange={setAmount}
-        placeholder="Enter budget limit"
+        placeholder="Enter budget limit (e.g. 10K, 1.2M)"
         className="dialog-input"
       />
 

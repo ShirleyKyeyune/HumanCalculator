@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
-import AmountInput from './AmountInput';
+import AmountInput, { parseAmountValue } from './AmountInput';
 
 /**
  * Small inline form for setting (or clearing) a category's own budget
@@ -11,7 +11,7 @@ function CategoryLimitEditor({ value, onChange, onClose }) {
   const [amount, setAmount] = useState(value != null ? String(value) : '');
 
   const handleSave = () => {
-    const parsed = parseFloat(amount);
+    const parsed = parseAmountValue(amount);
     if (Number.isFinite(parsed) && parsed >= 0) {
       onChange(parsed);
       onClose();
@@ -28,7 +28,7 @@ function CategoryLimitEditor({ value, onChange, onClose }) {
       <AmountInput
         value={amount}
         onChange={setAmount}
-        placeholder="Set a budget limit"
+        placeholder="Set a budget limit (e.g. 10K, 1.2M)"
         className="dialog-input"
         autoFocus
       />
