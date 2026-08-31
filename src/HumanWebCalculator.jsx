@@ -8,6 +8,7 @@ import * as XLSX from "xlsx";
 import HistoryPanel from "./components/HistoryPanel";
 import SearchPanel from "./components/SearchPanel";
 import PaymentDialog from "./components/PaymentDialog";
+import SpendingSummaryPanel from "./components/SpendingSummaryPanel";
 import QRCodeDisplay from "./components/QRCodeDisplay";
 import MobileMoneyCalculator from "./components/MobileMoneyCalculator";
 import { QRCodeIcon } from "./icons/Icons";
@@ -84,6 +85,7 @@ export default function HumanWebCalculator({
   const [showSearchPanel, setShowSearchPanel] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [paymentTargetWorkbook, setPaymentTargetWorkbook] = useState(null);
+  const [showSpendingSummary, setShowSpendingSummary] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
   const [qrCodeContent, setQRCodeContent] = useState('');
   const textareaRef = useRef(null);
@@ -149,6 +151,11 @@ export default function HumanWebCalculator({
 
   const handleSavePayment = (id, paymentData) => {
     updateWorkbookPayment(id, paymentData);
+  };
+
+  // Toggle spending summary report
+  const toggleSpendingSummary = () => {
+    setShowSpendingSummary(prev => !prev);
   };
 
   // Toggle QR code display
@@ -549,6 +556,13 @@ export default function HumanWebCalculator({
         Mark as Paid
       </button>
       <button
+        id="spending-summary-trigger"
+        onClick={toggleSpendingSummary}
+        style={{ display: 'none' }}
+      >
+        Spending Summary
+      </button>
+      <button
         id="new-workbook-trigger"
         onClick={createNewWorkbook}
         style={{ display: 'none' }}
@@ -585,6 +599,7 @@ export default function HumanWebCalculator({
 
       {/* Payment Dialog */}
       <PaymentDialog
+        key={paymentTargetWorkbook?.id || 'none'}
         isVisible={showPaymentDialog}
         onClose={closePaymentDialog}
         workbook={paymentTargetWorkbook}
@@ -592,6 +607,15 @@ export default function HumanWebCalculator({
         onAddCategory={addCategory}
         onAddSubcategory={addSubcategory}
         onSave={handleSavePayment}
+        formatWithCommas={formatWithCommas}
+      />
+
+      {/* Spending Summary */}
+      <SpendingSummaryPanel
+        isVisible={showSpendingSummary}
+        onClose={toggleSpendingSummary}
+        workbooks={savedWorkbooks}
+        onOpenWorkbook={loadWorkbook}
         formatWithCommas={formatWithCommas}
       />
 

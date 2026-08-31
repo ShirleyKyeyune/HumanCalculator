@@ -1,7 +1,7 @@
 import './App.css';
 import { useState, useEffect } from 'react';
 import HumanWebCalculator from './HumanWebCalculator';
-import { SunIcon, MoonIcon, ShareIcon, HistoryIcon, WalletIcon, SearchIcon, PaidIcon } from './icons/Icons';
+import { SunIcon, MoonIcon, ShareIcon, HistoryIcon, WalletIcon, SearchIcon, PaidIcon, ChartIcon } from './icons/Icons';
 import pkg from '../package.json';
 const calculatorIcon = process.env.PUBLIC_URL + '/favicon.svg';
 
@@ -84,6 +84,14 @@ function App() {
               title="Mark this workbook as paid"
             >
               <PaidIcon className="button-icon" /> Mark Paid
+            </button>
+            <button
+              className="workbook-button"
+              id="spending-summary-button"
+              onClick={() => document.getElementById('spending-summary-trigger').click()}
+              title="View spending by category"
+            >
+              <ChartIcon className="button-icon" /> Summary
             </button>
             <button
               className="workbook-button"

@@ -2021,3 +2021,353 @@ body {
 .dark .search-result-action-button.mark-paid:hover {
   background-color: #1a202c;
 }
+
+/* Spending summary styles */
+.spending-summary-dialog {
+  max-width: 620px;
+}
+
+.spending-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.spending-filter-select {
+  margin-top: 0;
+  flex: 1;
+  min-width: 140px;
+  cursor: pointer;
+}
+
+.spending-summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.spending-summary-header h3 {
+  margin: 0;
+}
+
+.spending-range-options {
+  margin-bottom: 0.75rem;
+}
+
+.spending-custom-range {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.spending-custom-range .dialog-input {
+  margin-top: 0;
+}
+
+.spending-custom-range-separator {
+  color: #718096;
+  font-size: 0.875rem;
+}
+
+.dark .spending-custom-range-separator {
+  color: #a0aec0;
+}
+
+.spending-summary-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0.875rem 1rem;
+  border-radius: 0.5rem;
+  background-color: #f3e8ff;
+  margin-bottom: 1rem;
+}
+
+.dark .spending-summary-total {
+  background-color: #322659;
+}
+
+.spending-summary-total-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #6b46c1;
+}
+
+.dark .spending-summary-total-label {
+  color: #d6bcfa;
+}
+
+.spending-summary-total-value {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #44337a;
+}
+
+.dark .spending-summary-total-value {
+  color: #f7fafc;
+}
+
+.spending-summary-total-count {
+  font-size: 0.8rem;
+  color: #718096;
+}
+
+.dark .spending-summary-total-count {
+  color: #a0aec0;
+}
+
+.spending-summary-content {
+  max-height: 400px;
+  overflow-y: auto;
+  margin-bottom: 1rem;
+}
+
+.spending-category-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.spending-category-item {
+  margin-bottom: 0.875rem;
+  padding-bottom: 0.875rem;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.dark .spending-category-item {
+  border-bottom-color: #4a5568;
+}
+
+.spending-category-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.spending-category-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+}
+
+.spending-category-name {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-weight: 600;
+}
+
+.spending-expand-caret {
+  display: inline-block;
+  font-size: 0.7rem;
+  color: #a0aec0;
+  transition: transform 0.2s;
+}
+
+.spending-expand-caret.expanded {
+  transform: rotate(90deg);
+}
+
+.spending-category-total {
+  font-weight: 700;
+  color: #6b46c1;
+}
+
+.dark .spending-category-total {
+  color: #d6bcfa;
+}
+
+.spending-category-bar-track {
+  height: 8px;
+  border-radius: 9999px;
+  background-color: #edf2f7;
+  margin: 0.5rem 0 0.25rem;
+  overflow: hidden;
+}
+
+.spending-category-bar-track.subcategory {
+  height: 5px;
+  margin: 0.25rem 0 0;
+}
+
+.dark .spending-category-bar-track {
+  background-color: #4a5568;
+}
+
+.spending-category-bar-fill {
+  height: 100%;
+  background-color: #9f7aea;
+  border-radius: 9999px;
+}
+
+.spending-category-bar-fill.subcategory {
+  background-color: #b794f4;
+}
+
+.dark .spending-category-bar-fill {
+  background-color: #6b46c1;
+}
+
+.dark .spending-category-bar-fill.subcategory {
+  background-color: #805ad5;
+}
+
+.spending-category-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #718096;
+}
+
+.dark .spending-category-meta {
+  color: #a0aec0;
+}
+
+.spending-subcategory-groups {
+  margin: 0.75rem 0 0;
+}
+
+.spending-subcategory-group {
+  margin-bottom: 1rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.375rem;
+  background-color: #f8fafc;
+}
+
+.dark .spending-subcategory-group {
+  background-color: #364154;
+}
+
+.spending-subcategory-group:last-child {
+  margin-bottom: 0;
+}
+
+.spending-subcategory-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.spending-workbook-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.625rem 0 0;
+}
+
+.spending-workbook-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0;
+  border-top: 1px solid #e2e8f0;
+}
+
+.dark .spending-workbook-row {
+  border-top-color: #4a5568;
+}
+
+.spending-workbook-row:first-child {
+  border-top: none;
+}
+
+.spending-workbook-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.spending-workbook-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spending-workbook-date {
+  font-size: 0.7rem;
+  color: #718096;
+}
+
+.dark .spending-workbook-date {
+  color: #a0aec0;
+}
+
+.spending-workbook-amount {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #38a169;
+  white-space: nowrap;
+}
+
+.dark .spending-workbook-amount {
+  color: #68d391;
+}
+
+.spending-workbook-open-button {
+  padding: 0.25rem 0.625rem;
+  border: none;
+  border-radius: 0.25rem;
+  background-color: #9f7aea;
+  color: white;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+.spending-workbook-open-button:hover {
+  background-color: #805ad5;
+}
+
+.dark .spending-workbook-open-button {
+  background-color: #6b46c1;
+}
+
+.dark .spending-workbook-open-button:hover {
+  background-color: #553c9a;
+}
+
+.spending-subcategory-name {
+  color: #4a5568;
+}
+
+.dark .spending-subcategory-name {
+  color: #cbd5e0;
+}
+
+.spending-subcategory-total {
+  font-weight: 600;
+  color: #4a5568;
+}
+
+.dark .spending-subcategory-total {
+  color: #e2e8f0;
+}
+
+.no-spending-data {
+  text-align: center;
+  color: #718096;
+  font-style: italic;
+  margin: 2rem 0;
+}
+
+.dark .no-spending-data {
+  color: #a0aec0;
+}
