@@ -66,7 +66,28 @@ function useBudgets() {
     persist(next);
   }, [budgets, persist]);
 
-  return { budgets, addBudget, updateBudget, deleteBudget, removeWorkbookFromBudgets };
+  /**
+   * Un-attach categories from every budget - used after a category (and its
+   * cascade-deleted descendants) is deleted so budgets don't keep tracking
+   * ids that no longer exist.
+   */
+  const removeCategoriesFromBudgets = useCallback((categoryIds) => {
+    if (!categoryIds || categoryIds.length === 0) return;
+    const next = budgets.map(b => ({
+      ...b,
+      categoryIds: b.categoryIds.filter(id => !categoryIds.includes(id))
+    }));
+    persist(next);
+  }, [budgets, persist]);
+
+  return {
+    budgets,
+    addBudget,
+    updateBudget,
+    deleteBudget,
+    removeWorkbookFromBudgets,
+    removeCategoriesFromBudgets
+  };
 }
 
 /** This budget's scope: any category it tracks, plus all their subcategories. */

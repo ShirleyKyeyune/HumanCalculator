@@ -155,7 +155,14 @@ export default function HumanWebCalculator({
   const { categories, addCategory, renameCategory, deleteCategory } = useCategories();
 
   // Use the budgets hook to manage spending budgets
-  const { budgets, addBudget, updateBudget, deleteBudget, removeWorkbookFromBudgets } = useBudgets();
+  const {
+    budgets,
+    addBudget,
+    updateBudget,
+    deleteBudget,
+    removeWorkbookFromBudgets,
+    removeCategoriesFromBudgets
+  } = useBudgets();
 
   // Dark mode toggle moved to App component
 
@@ -219,11 +226,13 @@ export default function HumanWebCalculator({
   }, []);
 
   // Delete a category (and its descendants), then un-categorize any
-  // workbook that referenced one of the removed categories
+  // workbook that referenced one of the removed categories and stop any
+  // budget from tracking the now-gone ids
   const handleDeleteCategory = useCallback((id) => {
     const removedIds = deleteCategory(id);
     clearWorkbookCategoryReferences(removedIds);
-  }, [deleteCategory, clearWorkbookCategoryReferences]);
+    removeCategoriesFromBudgets(removedIds);
+  }, [deleteCategory, clearWorkbookCategoryReferences, removeCategoriesFromBudgets]);
 
   // Move a workbook to a different category (or un-categorize it),
   // via drag-and-drop or the "Move to" select in the category manager
@@ -761,6 +770,10 @@ export default function HumanWebCalculator({
         onUpdateBudget={updateBudget}
         onDeleteBudget={deleteBudget}
         onOpenWorkbook={loadWorkbook}
+        onAddCategory={addCategory}
+        onDeleteCategory={handleDeleteCategory}
+        onSetWorkbookCategory={handleSetWorkbookCategory}
+        onCreateWorkbook={createNewWorkbook}
         formatWithCommas={formatWithCommas}
       />
 
