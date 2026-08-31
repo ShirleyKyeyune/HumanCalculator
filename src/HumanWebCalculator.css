@@ -608,12 +608,9 @@ body {
 .history-panel {
   position: fixed;
   top: 0;
-  /* Width and hidden-state offset stay in lockstep via min()/calc() (rather
-     than a separate mobile media query competing with this rule) so the
-     panel is always exactly off-screen, and fills the full width on any
-     viewport narrower than its natural size instead of leaving a gap. */
-  right: calc(-1 * min(320px, 100vw));
-  width: min(320px, 100vw);
+  right: -320px;
+  /* Start off-screen on the right */
+  width: 320px;
   height: 100vh;
   background-color: white;
   box-shadow: -2px 0 10px rgba(0, 0, 0, 0.2);
@@ -838,11 +835,9 @@ body {
 .search-panel {
   position: fixed;
   top: 0;
-  /* Width and hidden-state offset stay in lockstep via min()/calc() so the
-     panel is always exactly off-screen, and fills the full width on any
-     viewport narrower than its natural size instead of leaving a gap. */
-  right: calc(-1 * min(320px, 100vw));
-  width: min(320px, 100vw);
+  right: -320px;
+  /* Start off-screen on the right */
+  width: 320px;
   height: 100vh;
   background-color: white;
   box-shadow: -2px 0 10px rgba(0, 0, 0, 0.2);
@@ -2255,11 +2250,8 @@ body {
 .spending-summary-panel {
   position: fixed;
   top: 0;
-  /* Width and hidden-state offset stay in lockstep via min()/calc() so the
-     panel is always exactly off-screen, and fills the full width on any
-     viewport narrower than its natural size instead of leaving a gap. */
-  right: calc(-1 * min(520px, 100vw));
-  width: min(520px, 100vw);
+  right: -520px;
+  width: 520px;
   height: 100vh;
   background-color: white;
   box-shadow: -2px 0 10px rgba(0, 0, 0, 0.2);
@@ -2767,11 +2759,8 @@ body {
 .category-manager-panel {
   position: fixed;
   top: 0;
-  /* Width and hidden-state offset stay in lockstep via min()/calc() so the
-     panel is always exactly off-screen, and fills the full width on any
-     viewport narrower than its natural size instead of leaving a gap. */
-  right: calc(-1 * min(520px, 100vw));
-  width: min(520px, 100vw);
+  right: -520px;
+  width: 520px;
   height: 100vh;
   background-color: white;
   box-shadow: -2px 0 10px rgba(0, 0, 0, 0.2);
@@ -2986,11 +2975,8 @@ body {
 .budget-panel {
   position: fixed;
   top: 0;
-  /* Width and hidden-state offset stay in lockstep via min()/calc() so the
-     panel is always exactly off-screen, and fills the full width on any
-     viewport narrower than its natural size instead of leaving a gap. */
-  right: calc(-1 * min(720px, 100vw));
-  width: min(720px, 100vw);
+  right: -720px;
+  width: 720px;
   height: 100vh;
   background-color: white;
   box-shadow: -2px 0 10px rgba(0, 0, 0, 0.2);
@@ -3895,5 +3881,22 @@ body {
 @media (hover: none) {
   .workbook-quick-view-trigger {
     opacity: 0.65;
+  }
+}
+
+/* Right-docked slide-in panels (history, search, spending summary,
+   budgets, category manager) each have their own deliberate desktop width
+   (320-720px), but on mobile that leaves a visible gap of bare page down
+   the left edge instead of covering the screen - force each one to the
+   full viewport below this breakpoint, matching its width and hidden-state
+   offset so it stays exactly off-screen until shown. */
+@media (max-width: 640px) {
+  .history-panel,
+  .search-panel,
+  .spending-summary-panel,
+  .budget-panel,
+  .category-manager-panel {
+    width: 100vw;
+    right: -100vw;
   }
 }
