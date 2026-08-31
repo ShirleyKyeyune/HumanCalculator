@@ -51,7 +51,17 @@ function OrganizeWorkbookDialog({
   return (
     <div className="dialog-overlay">
       <div className="dialog payment-dialog">
-        <h3>Add to Budget / Category</h3>
+        <div className="dialog-header">
+          <h3>Add to Budget / Category</h3>
+          <button
+            type="button"
+            className="close-panel-button"
+            onClick={onClose}
+            aria-label="Close"
+          >
+            &times;
+          </button>
+        </div>
         <p className="payment-dialog-workbook-name">{workbook.name}</p>
 
         <div className="dialog-content">

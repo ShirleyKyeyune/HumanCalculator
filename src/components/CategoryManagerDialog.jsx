@@ -1,14 +1,19 @@
 import React, { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { MAX_DEPTH, getChildren, getDepth, getDescendantIds, flattenTree } from '../hooks/useCategories';
+import ActionMenu from './ActionMenu';
+import ColorSwatchPicker from './ColorSwatchPicker';
+import CategoryLimitEditor from './CategoryLimitEditor';
+import WorkbookQuickView from './WorkbookQuickView';
 
 const UNCATEGORIZED_ID = '__uncategorized__';
 
 /**
- * A workbook row inside a category folder: draggable, and always offers a
- * "Move to" select as the non-drag fallback for reassigning it.
+ * A workbook row inside a category folder: draggable, offers a "Move to"
+ * select as the non-drag fallback for reassigning it, and a quick-view
+ * button to peek at its content without leaving this panel.
  */
-function WorkbookRow({ workbook, moveOptions, onMoveWorkbook }) {
+function WorkbookRow({ workbook, moveOptions, onMoveWorkbook, onQuickView }) {
   return (
     <li
       className="category-tree-workbook-row"
@@ -20,6 +25,15 @@ function WorkbookRow({ workbook, moveOptions, onMoveWorkbook }) {
     >
       <span className="category-tree-workbook-name">{workbook.name}</span>
       <span className="category-tree-workbook-date">{workbook.displayDate}</span>
+      <button
+        type="button"
+        className="workbook-quick-view-trigger"
+        onClick={() => onQuickView(workbook)}
+        title="Quick view"
+        aria-label={`Quick view ${workbook.name}`}
+      >
+        &#128065;
+      </button>
       <select
         value={workbook.categoryId || ''}
         onChange={(e) => onMoveWorkbook(workbook.id, e.target.value || null)}
@@ -58,12 +72,18 @@ function CategoryTreeNode({
   onAddCategory,
   onRenameCategory,
   onDeleteCategory,
-  onMoveWorkbook
+  onSetColor,
+  onSetLimit,
+  onMoveWorkbook,
+  onQuickView,
+  formatWithCommas
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(node.name);
   const [isAddingChild, setIsAddingChild] = useState(false);
   const [newChildName, setNewChildName] = useState('');
+  const [isPickingColor, setIsPickingColor] = useState(false);
+  const [isSettingLimit, setIsSettingLimit] = useState(false);
 
   const children = getChildren(categories, node.id);
   const canAddChild = getDepth(categories, node.id) < MAX_DEPTH - 1;
@@ -144,39 +164,73 @@ function CategoryTreeNode({
               >
                 <span className={`spending-expand-caret ${isExpanded ? 'expanded' : ''}`}>&#9656;</span>
               </button>
+              <span
+                className={`category-color-dot ${node.color ? '' : 'none'}`}
+                style={node.color ? { backgroundColor: node.color } : undefined}
+                aria-hidden="true"
+              />
               <span className="category-tree-name">{node.name}</span>
               {directWorkbooks.length > 0 && (
                 <span className="category-tree-count-badge">{directWorkbooks.length}</span>
               )}
-            </div>
-            <div className="category-tree-actions">
-              {canAddChild && (
-                <button
-                  type="button"
-                  className="category-tree-action-button add"
-                  onClick={() => setIsAddingChild(prev => !prev)}
-                >
-                  + Add Child
-                </button>
+              {node.limit != null && (
+                <span className="category-limit-badge">Limit: {formatWithCommas(node.limit)}</span>
               )}
-              <button
-                type="button"
-                className="category-tree-action-button edit"
-                onClick={() => setIsEditing(true)}
-              >
-                Edit
-              </button>
-              <button
-                type="button"
-                className="category-tree-action-button delete"
-                onClick={handleDelete}
-              >
-                Delete
-              </button>
             </div>
+            <ActionMenu
+              label={`Actions for ${node.name}`}
+              items={[
+                canAddChild && {
+                  key: 'add-child',
+                  label: '+ Add Child',
+                  onClick: () => setIsAddingChild(prev => !prev)
+                },
+                {
+                  key: 'color',
+                  label: 'Set Color',
+                  onClick: () => setIsPickingColor(prev => !prev)
+                },
+                {
+                  key: 'limit',
+                  label: node.limit != null ? 'Edit Limit' : 'Set Limit',
+                  onClick: () => setIsSettingLimit(prev => !prev)
+                },
+                {
+                  key: 'edit',
+                  label: 'Edit',
+                  onClick: () => setIsEditing(true)
+                },
+                {
+                  key: 'delete',
+                  label: 'Delete',
+                  danger: true,
+                  onClick: handleDelete
+                }
+              ]}
+            />
           </>
         )}
       </div>
+
+      {isPickingColor && (
+        <div className="category-color-picker-row" style={{ marginLeft: `${(depth + 1) * 1.25}rem` }}>
+          <ColorSwatchPicker
+            value={node.color || null}
+            onChange={(color) => onSetColor(node.id, color)}
+            onClose={() => setIsPickingColor(false)}
+          />
+        </div>
+      )}
+
+      {isSettingLimit && (
+        <div className="category-limit-editor-row" style={{ marginLeft: `${(depth + 1) * 1.25}rem` }}>
+          <CategoryLimitEditor
+            value={node.limit ?? null}
+            onChange={(limit) => onSetLimit(node.id, limit)}
+            onClose={() => setIsSettingLimit(false)}
+          />
+        </div>
+      )}
 
       {isAddingChild && (
         <div className="category-add-inline category-tree-add-child" style={{ marginLeft: `${(depth + 1) * 1.25}rem` }}>
@@ -210,6 +264,7 @@ function CategoryTreeNode({
                   workbook={wb}
                   moveOptions={moveOptions}
                   onMoveWorkbook={onMoveWorkbook}
+                  onQuickView={onQuickView}
                 />
               ))}
             </ul>
@@ -235,7 +290,11 @@ function CategoryTreeNode({
                   onAddCategory={onAddCategory}
                   onRenameCategory={onRenameCategory}
                   onDeleteCategory={onDeleteCategory}
+                  onSetColor={onSetColor}
+                  onSetLimit={onSetLimit}
                   onMoveWorkbook={onMoveWorkbook}
+                  onQuickView={onQuickView}
+                  formatWithCommas={formatWithCommas}
                 />
               ))}
             </ul>
@@ -265,11 +324,16 @@ function CategoryManagerDialog({
   onAddCategory,
   onRenameCategory,
   onDeleteCategory,
-  onMoveWorkbook
+  onSetCategoryColor,
+  onSetCategoryLimit,
+  onMoveWorkbook,
+  onOpenWorkbook,
+  formatWithCommas
 }) {
   const [newRootName, setNewRootName] = useState('');
   const [expandedIds, setExpandedIds] = useState(() => new Set());
   const [dragOverId, setDragOverId] = useState(null);
+  const [quickViewWorkbook, setQuickViewWorkbook] = useState(null);
 
   const rootCategories = getChildren(categories, null);
 
@@ -319,6 +383,12 @@ function CategoryManagerDialog({
     }
   };
 
+  const handleOpenFromQuickView = () => {
+    if (quickViewWorkbook) onOpenWorkbook(quickViewWorkbook);
+    setQuickViewWorkbook(null);
+    onClose();
+  };
+
   return (
     <div className={`category-manager-panel ${isVisible ? 'show' : ''}`}>
       <div className="spending-summary-header">
@@ -364,6 +434,7 @@ function CategoryManagerDialog({
                       workbook={wb}
                       moveOptions={moveOptions}
                       onMoveWorkbook={onMoveWorkbook}
+                      onQuickView={setQuickViewWorkbook}
                     />
                   ))}
                 </ul>
@@ -391,8 +462,12 @@ function CategoryManagerDialog({
                 onDropOnNode={handleDropOnNode}
                 onAddCategory={onAddCategory}
                 onRenameCategory={onRenameCategory}
+                onSetColor={onSetCategoryColor}
+                onSetLimit={onSetCategoryLimit}
+                onQuickView={setQuickViewWorkbook}
                 onDeleteCategory={onDeleteCategory}
                 onMoveWorkbook={onMoveWorkbook}
+                formatWithCommas={formatWithCommas}
               />
             ))}
           </ul>
@@ -416,6 +491,15 @@ function CategoryManagerDialog({
           </button>
         </div>
       </div>
+
+      {quickViewWorkbook && (
+        <WorkbookQuickView
+          workbook={quickViewWorkbook}
+          formatWithCommas={formatWithCommas}
+          onClose={() => setQuickViewWorkbook(null)}
+          onOpenFull={handleOpenFromQuickView}
+        />
+      )}
     </div>
   );
 }
@@ -423,14 +507,20 @@ function CategoryManagerDialog({
 const categoryShape = PropTypes.shape({
   id: PropTypes.string.isRequired,
   name: PropTypes.string.isRequired,
-  parentId: PropTypes.string
+  parentId: PropTypes.string,
+  color: PropTypes.string,
+  limit: PropTypes.number
 });
 
 const workbookShape = PropTypes.shape({
   id: PropTypes.string.isRequired,
   name: PropTypes.string,
+  content: PropTypes.string,
   displayDate: PropTypes.string,
-  categoryId: PropTypes.string
+  categoryId: PropTypes.string,
+  isPaid: PropTypes.bool,
+  amountPaid: PropTypes.number,
+  paidAtDisplay: PropTypes.string
 });
 
 WorkbookRow.propTypes = {
@@ -440,7 +530,8 @@ WorkbookRow.propTypes = {
     name: PropTypes.string.isRequired,
     depth: PropTypes.number.isRequired
   })).isRequired,
-  onMoveWorkbook: PropTypes.func.isRequired
+  onMoveWorkbook: PropTypes.func.isRequired,
+  onQuickView: PropTypes.func.isRequired
 };
 
 CategoryTreeNode.propTypes = {
@@ -459,7 +550,11 @@ CategoryTreeNode.propTypes = {
   onAddCategory: PropTypes.func.isRequired,
   onRenameCategory: PropTypes.func.isRequired,
   onDeleteCategory: PropTypes.func.isRequired,
-  onMoveWorkbook: PropTypes.func.isRequired
+  onSetColor: PropTypes.func.isRequired,
+  onSetLimit: PropTypes.func.isRequired,
+  onMoveWorkbook: PropTypes.func.isRequired,
+  onQuickView: PropTypes.func.isRequired,
+  formatWithCommas: PropTypes.func.isRequired
 };
 
 CategoryManagerDialog.propTypes = {
@@ -470,7 +565,11 @@ CategoryManagerDialog.propTypes = {
   onAddCategory: PropTypes.func.isRequired,
   onRenameCategory: PropTypes.func.isRequired,
   onDeleteCategory: PropTypes.func.isRequired,
-  onMoveWorkbook: PropTypes.func.isRequired
+  onSetCategoryColor: PropTypes.func.isRequired,
+  onSetCategoryLimit: PropTypes.func.isRequired,
+  onMoveWorkbook: PropTypes.func.isRequired,
+  onOpenWorkbook: PropTypes.func.isRequired,
+  formatWithCommas: PropTypes.func.isRequired
 };
 
 // Memoized: this panel stays mounted for its slide-in/out animation even

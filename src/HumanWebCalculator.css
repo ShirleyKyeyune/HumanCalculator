@@ -1006,6 +1006,23 @@ body {
   color: #f7fafc;
 }
 
+.dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.dialog-header h3 {
+  flex: 1;
+  min-width: 0;
+}
+
+.dialog-header .close-panel-button {
+  flex-shrink: 0;
+  margin-top: -0.25rem;
+}
+
 .dialog-content {
   margin-bottom: 1.5rem;
 }
@@ -2209,6 +2226,18 @@ body {
   color: inherit;
 }
 
+.budget-category-header-row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.budget-category-header-row .spending-category-header {
+  width: auto;
+  flex: 1;
+  min-width: 0;
+}
+
 .spending-category-name {
   display: flex;
   align-items: center;
@@ -2536,53 +2565,6 @@ body {
 .dark .category-tree-count-badge {
   background-color: #44337a;
   color: #d6bcfa;
-}
-
-.category-tree-actions {
-  display: flex;
-  gap: 0.375rem;
-  flex-shrink: 0;
-}
-
-.category-tree-action-button {
-  padding: 0.25rem 0.5rem;
-  border: none;
-  border-radius: 0.25rem;
-  font-size: 0.75rem;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background-color 0.2s;
-  background-color: #e2e8f0;
-  color: #4a5568;
-}
-
-.category-tree-action-button:hover {
-  background-color: #cbd5e0;
-}
-
-.dark .category-tree-action-button {
-  background-color: #4a5568;
-  color: #e2e8f0;
-}
-
-.dark .category-tree-action-button:hover {
-  background-color: #2d3748;
-}
-
-.category-tree-action-button.add {
-  color: #38a169;
-}
-
-.dark .category-tree-action-button.add {
-  color: #68d391;
-}
-
-.category-tree-action-button.delete {
-  color: #e53e3e;
-}
-
-.dark .category-tree-action-button.delete {
-  color: #fc8181;
 }
 
 .category-tree-edit-row {
@@ -3135,33 +3117,384 @@ body {
   color: inherit;
 }
 
-/* Per-item unlink actions (remove from category / remove from budget) */
-.spending-workbook-unlink-button {
+/* Kebab action menu: keeps row/folder actions out of view until needed.
+   The trigger stays dimly visible rather than fully hidden, so it works the
+   same way on touch devices that have no hover state to reveal it. */
+.action-menu {
+  position: relative;
   flex-shrink: 0;
-  padding: 0.25rem 0.5rem;
-  border: 1px solid #e2e8f0;
+}
+
+.action-menu-trigger {
+  padding: 0.125rem 0.375rem;
+  border: none;
   border-radius: 0.25rem;
-  background-color: transparent;
-  color: #718096;
-  font-size: 0.75rem;
+  background: none;
+  color: inherit;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.45;
+  transition: opacity 0.15s, background-color 0.15s;
+}
+
+.action-menu-trigger:hover,
+.action-menu-trigger:focus-visible,
+.action-menu-trigger[aria-expanded="true"] {
+  opacity: 1;
+  background-color: #e2e8f0;
+}
+
+.dark .action-menu-trigger:hover,
+.dark .action-menu-trigger:focus-visible,
+.dark .action-menu-trigger[aria-expanded="true"] {
+  background-color: #4a5568;
+}
+
+/* Touch devices have no hover to reveal the trigger, so keep it a bit more
+   visible by default there. */
+@media (hover: none) {
+  .action-menu-trigger {
+    opacity: 0.65;
+  }
+}
+
+.action-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  min-width: 170px;
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  padding: 0.375rem;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.action-menu-dropdown.align-right {
+  right: 0;
+}
+
+.action-menu-dropdown.align-left {
+  left: 0;
+}
+
+.dark .action-menu-dropdown {
+  background-color: #2d3748;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+}
+
+.action-menu-item {
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  background: none;
+  border: none;
+  border-radius: 0.375rem;
+  color: #1a202c;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: left;
   cursor: pointer;
   white-space: nowrap;
   transition: background-color 0.2s;
 }
 
-.spending-workbook-unlink-button:hover {
-  background-color: #fed7d7;
-  color: #e53e3e;
-  border-color: #fed7d7;
+.action-menu-item:hover {
+  background-color: #f0e6fd;
 }
 
-.dark .spending-workbook-unlink-button {
-  border-color: #4a5568;
+.dark .action-menu-item {
+  color: #f7fafc;
+}
+
+.dark .action-menu-item:hover {
+  background-color: #4a5568;
+}
+
+.action-menu-item.danger {
+  color: #e53e3e;
+}
+
+.dark .action-menu-item.danger {
+  color: #fc8181;
+}
+
+/* Category color dot: shown before every folder name, dashed/hollow when
+   no color has been set so it still hints that one can be. */
+.category-color-dot {
+  flex-shrink: 0;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.category-color-dot.none {
+  border: 1.5px dashed #cbd5e0;
+}
+
+.dark .category-color-dot.none {
+  border-color: #718096;
+}
+
+.category-color-picker-row {
+  margin: 0.375rem 0 0.625rem;
+}
+
+/* Category budget limit: badge next to the name, inline editor, and the
+   spent-vs-limit progress shown wherever a category's totals are already
+   computed (Budget Detail, Spending Summary). */
+.category-limit-badge {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.0625rem 0.4rem;
+  border-radius: 9999px;
+  background-color: #feebc8;
+  color: #9c4221;
+}
+
+.dark .category-limit-badge {
+  background-color: #7b341e;
+  color: #fbd38d;
+}
+
+.category-limit-editor-row {
+  margin: 0.375rem 0 0.625rem;
+}
+
+.category-limit-editor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem;
+  border-radius: 0.5rem;
+  background-color: #f8fafc;
+}
+
+.dark .category-limit-editor {
+  background-color: #364154;
+}
+
+.category-limit-editor .dialog-input {
+  margin: 0;
+  flex: 1;
+  min-width: 8rem;
+}
+
+.category-limit-editor-actions {
+  display: flex;
+  gap: 0.375rem;
+  flex-shrink: 0;
+}
+
+.category-limit-progress {
+  margin-top: 0.5rem;
+}
+
+.spending-category-limit-suffix {
+  font-weight: 400;
+  color: #718096;
+}
+
+.dark .spending-category-limit-suffix {
   color: #a0aec0;
 }
 
-.dark .spending-workbook-unlink-button:hover {
-  background-color: #63171b;
-  color: #fc8181;
-  border-color: #63171b;
+.color-swatch-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.color-swatch-picker-close {
+  margin-left: auto;
+  padding: 0.125rem 0.4rem;
+  border: none;
+  border-radius: 0.25rem;
+  background: none;
+  color: #718096;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.color-swatch-picker-close:hover {
+  background-color: #e2e8f0;
+  color: #1a202c;
+}
+
+.dark .color-swatch-picker-close {
+  color: #a0aec0;
+}
+
+.dark .color-swatch-picker-close:hover {
+  background-color: #4a5568;
+  color: #f7fafc;
+}
+
+.color-swatch {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.color-swatch:hover {
+  transform: scale(1.1);
+}
+
+.color-swatch.selected {
+  border-color: #6b46c1;
+  box-shadow: 0 0 0 2px white, 0 0 0 3px #6b46c1;
+}
+
+.dark .color-swatch.selected {
+  box-shadow: 0 0 0 2px #2d3748, 0 0 0 3px #d6bcfa;
+}
+
+.color-swatch-none {
+  background-color: transparent;
+  color: #a0aec0;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.dark .color-swatch-none {
+  color: #718096;
+}
+
+.color-swatch-custom {
+  position: relative;
+  background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red);
+  overflow: hidden;
+}
+
+.color-swatch-custom input[type="color"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+
+/* Workbook quick view: a dropdown-like preview layered above whichever
+   panel triggered it - no dimming backdrop, dismisses on outside click. */
+.workbook-quick-view-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1150;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.workbook-quick-view {
+  pointer-events: auto;
+  width: 90vw;
+  max-width: 30rem;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  background-color: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+.dark .workbook-quick-view {
+  background-color: #2d3748;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+.workbook-quick-view-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.workbook-quick-view-header h4 {
+  margin: 0;
+  font-size: 1.05rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workbook-quick-view-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #718096;
+}
+
+.dark .workbook-quick-view-meta {
+  color: #a0aec0;
+}
+
+.workbook-quick-view-content {
+  flex: 1;
+  margin: 0;
+  padding: 0.75rem;
+  overflow-y: auto;
+  min-height: 4rem;
+  background-color: #f8fafc;
+  border-radius: 0.5rem;
+  font-family: inherit;
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.dark .workbook-quick-view-content {
+  background-color: #1a202c;
+}
+
+.workbook-quick-view-trigger {
+  flex-shrink: 0;
+  padding: 0.125rem 0.375rem;
+  border: none;
+  border-radius: 0.25rem;
+  background: none;
+  color: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  opacity: 0.45;
+  transition: opacity 0.15s, background-color 0.15s;
+}
+
+.workbook-quick-view-trigger:hover,
+.workbook-quick-view-trigger:focus-visible {
+  opacity: 1;
+  background-color: #e2e8f0;
+}
+
+.dark .workbook-quick-view-trigger:hover,
+.dark .workbook-quick-view-trigger:focus-visible {
+  background-color: #4a5568;
+}
+
+@media (hover: none) {
+  .workbook-quick-view-trigger {
+    opacity: 0.65;
+  }
 }

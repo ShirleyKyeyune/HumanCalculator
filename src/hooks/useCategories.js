@@ -7,12 +7,12 @@ const STORAGE_KEY = 'humanCalculatorCategories';
 export const MAX_DEPTH = 6;
 
 const DEFAULT_CATEGORIES = [
-  { id: 'cat-groceries', name: 'Groceries', parentId: null },
-  { id: 'cat-transport', name: 'Transport', parentId: null },
-  { id: 'cat-utilities', name: 'Utilities', parentId: null },
-  { id: 'cat-rent', name: 'Rent', parentId: null },
-  { id: 'cat-entertainment', name: 'Entertainment', parentId: null },
-  { id: 'cat-other', name: 'Other', parentId: null },
+  { id: 'cat-groceries', name: 'Groceries', parentId: null, color: null },
+  { id: 'cat-transport', name: 'Transport', parentId: null, color: null },
+  { id: 'cat-utilities', name: 'Utilities', parentId: null, color: null },
+  { id: 'cat-rent', name: 'Rent', parentId: null, color: null },
+  { id: 'cat-entertainment', name: 'Entertainment', parentId: null, color: null },
+  { id: 'cat-other', name: 'Other', parentId: null, color: null },
 ];
 
 /**
@@ -131,9 +131,63 @@ function useCategories() {
     const existing = siblings.find(c => c.name.toLowerCase() === trimmed.toLowerCase());
     if (existing) return existing;
 
-    const newCategory = { id: `cat-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, name: trimmed, parentId: parentId || null };
+    const newCategory = { id: `cat-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, name: trimmed, parentId: parentId || null, color: null };
     persist([...categories, newCategory]);
     return newCategory;
+  }, [categories, persist]);
+
+  /**
+   * Create a brand-new category that never reuses an existing same-named
+   * sibling - unlike addCategory, which is meant to be forgiving about
+   * accidental re-submission in the main category manager. Used from
+   * budget-scoped category creation, where reusing an existing id would
+   * silently pull in every workbook already filed under it elsewhere.
+   * Returns null if the parent is already at the maximum depth.
+   */
+  const createIsolatedCategory = useCallback((name, parentId = null) => {
+    const trimmed = (name || '').trim();
+    if (!trimmed) return null;
+
+    if (parentId) {
+      const parentDepth = getDepth(categories, parentId);
+      if (parentDepth >= MAX_DEPTH - 1) return null;
+    }
+
+    const newCategory = { id: `cat-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, name: trimmed, parentId: parentId || null, color: null };
+    persist([...categories, newCategory]);
+    return newCategory;
+  }, [categories, persist]);
+
+  /**
+   * Create fresh, empty copies of existing categories - same name and
+   * position in the tree, brand-new ids, zero workbooks attached - so a
+   * budget that "selects" an existing category gets its own isolated copy
+   * instead of inheriting whatever is already filed under the original.
+   * Batches every clone into a single persist so cloning several at once
+   * (from one form submit) doesn't drop any of them to a stale closure.
+   * @returns {Object} mapping of original id -> new cloned id
+   */
+  const cloneCategoriesAsEmpty = useCallback((ids) => {
+    const byId = new Map(categories.map(c => [c.id, c]));
+    const clones = [];
+    const mapping = {};
+    ids.forEach((id, i) => {
+      const source = byId.get(id);
+      if (!source) return;
+      const newCategory = {
+        id: `cat-${Date.now()}-${Math.random().toString(36).slice(2, 7)}-${i}`,
+        name: source.name,
+        parentId: source.parentId,
+        color: source.color || null,
+        limit: source.limit ?? null
+      };
+      clones.push(newCategory);
+      mapping[id] = newCategory.id;
+    });
+    if (clones.length > 0) {
+      persist([...categories, ...clones]);
+    }
+    return mapping;
   }, [categories, persist]);
 
   /** Rename a category in place. */
@@ -142,6 +196,20 @@ function useCategories() {
     if (!trimmed) return false;
     persist(categories.map(c => (c.id === id ? { ...c, name: trimmed } : c)));
     return true;
+  }, [categories, persist]);
+
+  /** Set (or clear, with color = null) a category's color. */
+  const setCategoryColor = useCallback((id, color) => {
+    persist(categories.map(c => (c.id === id ? { ...c, color } : c)));
+  }, [categories, persist]);
+
+  /**
+   * Set (or clear, with limit = null) a category's own budget limit - a cap
+   * independent of any top-level Budget entity that might also track this
+   * category, so a folder can have a spending ceiling of its own.
+   */
+  const setCategoryLimit = useCallback((id, limit) => {
+    persist(categories.map(c => (c.id === id ? { ...c, limit } : c)));
   }, [categories, persist]);
 
   /**
@@ -154,7 +222,16 @@ function useCategories() {
     return removedIds;
   }, [categories, persist]);
 
-  return { categories, addCategory, renameCategory, deleteCategory };
+  return {
+    categories,
+    addCategory,
+    createIsolatedCategory,
+    cloneCategoriesAsEmpty,
+    renameCategory,
+    deleteCategory,
+    setCategoryColor,
+    setCategoryLimit
+  };
 }
 
 export default useCategories;

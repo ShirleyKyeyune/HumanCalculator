@@ -1,9 +1,13 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { flattenTree, getChildren, getDescendantIds, getDepth, MAX_DEPTH } from '../hooks/useCategories';
 import { computeBudgetSpent } from '../hooks/useBudgets';
 import { computeWorkbookTotal } from '../utils/workbookTotal';
 import AmountInput from './AmountInput';
+import ActionMenu from './ActionMenu';
+import ColorSwatchPicker from './ColorSwatchPicker';
+import CategoryLimitEditor from './CategoryLimitEditor';
+import WorkbookQuickView from './WorkbookQuickView';
 
 const UNCATEGORIZED_ID = '__uncategorized__';
 
@@ -115,17 +119,25 @@ function BudgetCategoryNode({
   onAddCategory,
   onDeleteCategory,
   onSetWorkbookCategory,
+  onSetCategoryColor,
+  onSetCategoryLimit,
   onUpdateBudget,
   onCreateWorkbook,
+  onQuickView,
   formatWithCommas
 }) {
   const [isAddingChild, setIsAddingChild] = useState(false);
   const [newChildName, setNewChildName] = useState('');
   const [isAddingWorkbook, setIsAddingWorkbook] = useState(false);
+  const [isPickingColor, setIsPickingColor] = useState(false);
+  const [isSettingLimit, setIsSettingLimit] = useState(false);
 
   const isExpanded = expandedIds.has(node.id);
   const isUncategorized = node.id === UNCATEGORIZED_ID;
   const canAddChild = !isUncategorized && getDepth(categories, node.id) < MAX_DEPTH - 1;
+  // What counts against this folder's own limit: paid + still-pending spend
+  // filed here, mirroring how a top-level Budget weighs both together.
+  const limitUsed = node.paidTotal + node.unpaidTotal;
 
   const handleConfirmAddChild = () => {
     if (newChildName.trim()) {
@@ -175,50 +187,105 @@ function BudgetCategoryNode({
 
   return (
     <li className="spending-category-item" style={depth > 0 ? { marginLeft: '0.5rem' } : undefined}>
-      <button
-        type="button"
-        className="spending-category-header"
-        onClick={() => onToggle(node.id)}
-        aria-expanded={isExpanded}
-      >
-        <span className="spending-category-name">
-          <span className={`spending-expand-caret ${isExpanded ? 'expanded' : ''}`}>&#9656;</span>
-          {node.name}
-        </span>
-        <span className="budget-node-totals">
-          <span className="budget-node-paid-total">{formatWithCommas(node.paidTotal)} paid</span>
-          {node.unpaidTotal > 0 && (
-            <span className="budget-node-pending-total">{formatWithCommas(node.unpaidTotal)} pending</span>
-          )}
-        </span>
-      </button>
+      <div className="budget-category-header-row">
+        <button
+          type="button"
+          className="spending-category-header"
+          onClick={() => onToggle(node.id)}
+          aria-expanded={isExpanded}
+        >
+          <span className="spending-category-name">
+            <span className={`spending-expand-caret ${isExpanded ? 'expanded' : ''}`}>&#9656;</span>
+            {!isUncategorized && (
+              <span
+                className={`category-color-dot ${node.color ? '' : 'none'}`}
+                style={node.color ? { backgroundColor: node.color } : undefined}
+                aria-hidden="true"
+              />
+            )}
+            {node.name}
+          </span>
+          <span className="budget-node-totals">
+            <span className="budget-node-paid-total">{formatWithCommas(node.paidTotal)} paid</span>
+            {node.unpaidTotal > 0 && (
+              <span className="budget-node-pending-total">{formatWithCommas(node.unpaidTotal)} pending</span>
+            )}
+          </span>
+        </button>
+        <ActionMenu
+          label={`Actions for ${node.name}`}
+          items={[
+            canAddChild && {
+              key: 'add-child',
+              label: '+ Add Child',
+              onClick: () => { setIsAddingChild(v => !v); setIsAddingWorkbook(false); }
+            },
+            {
+              key: 'add-workbook',
+              label: '+ Add Workbook',
+              onClick: () => { setIsAddingWorkbook(v => !v); setIsAddingChild(false); }
+            },
+            !isUncategorized && {
+              key: 'color',
+              label: 'Set Color',
+              onClick: () => setIsPickingColor(v => !v)
+            },
+            !isUncategorized && {
+              key: 'limit',
+              label: node.limit != null ? 'Edit Limit' : 'Set Limit',
+              onClick: () => setIsSettingLimit(v => !v)
+            },
+            !isUncategorized && {
+              key: 'delete',
+              label: 'Delete',
+              danger: true,
+              onClick: handleDeleteFolder
+            }
+          ]}
+        />
+      </div>
       <div className="spending-category-meta">
         <span>{node.paidCount} paid · {node.unpaidCount} unpaid</span>
       </div>
 
-      <div className="budget-folder-actions" style={{ marginLeft: indent }}>
-        {canAddChild && (
-          <button
-            type="button"
-            className="budget-folder-action-button"
-            onClick={() => { setIsAddingChild(v => !v); setIsAddingWorkbook(false); }}
-          >
-            + Add Child
-          </button>
-        )}
-        <button
-          type="button"
-          className="budget-folder-action-button"
-          onClick={() => { setIsAddingWorkbook(v => !v); setIsAddingChild(false); }}
-        >
-          + Add Workbook
-        </button>
-        {!isUncategorized && (
-          <button type="button" className="budget-folder-action-button delete" onClick={handleDeleteFolder}>
-            Delete
-          </button>
-        )}
-      </div>
+      {node.limit != null && (
+        <div className="category-limit-progress">
+          <div className="spending-category-bar-track">
+            <div
+              className={`spending-category-bar-fill ${limitUsed > node.limit ? 'over-budget' : ''}`}
+              style={{ width: `${Math.min(100, (limitUsed / node.limit) * 100)}%` }}
+            />
+          </div>
+          <div className="spending-category-meta">
+            <span>{formatWithCommas(limitUsed)} of {formatWithCommas(node.limit)} limit</span>
+            <span className={limitUsed > node.limit ? 'budget-available-over' : 'budget-available-ok'}>
+              {limitUsed > node.limit
+                ? `${formatWithCommas(limitUsed - node.limit)} over`
+                : `${formatWithCommas(node.limit - limitUsed)} left`}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {isPickingColor && (
+        <div className="category-color-picker-row" style={{ marginLeft: indent }}>
+          <ColorSwatchPicker
+            value={node.color || null}
+            onChange={(color) => onSetCategoryColor(node.id, color)}
+            onClose={() => setIsPickingColor(false)}
+          />
+        </div>
+      )}
+
+      {isSettingLimit && (
+        <div className="category-limit-editor-row" style={{ marginLeft: indent }}>
+          <CategoryLimitEditor
+            value={node.limit ?? null}
+            onChange={(limit) => onSetCategoryLimit(node.id, limit)}
+            onClose={() => setIsSettingLimit(false)}
+          />
+        </div>
+      )}
 
       {isAddingChild && (
         <div className="category-add-inline" style={{ marginLeft: indent }}>
@@ -265,33 +332,32 @@ function BudgetCategoryNode({
                       Unpaid &middot; {formatWithCommas(computeWorkbookTotal(wb.content))}
                     </span>
                   )}
-                  {!isUncategorized && (
-                    <button
-                      type="button"
-                      className="spending-workbook-unlink-button"
-                      title="Remove from category"
-                      onClick={() => handleUnlinkCategory(wb)}
-                    >
-                      Untag
-                    </button>
-                  )}
-                  {isExplicitlyAttached(wb) && (
-                    <button
-                      type="button"
-                      className="spending-workbook-unlink-button"
-                      title="Remove from this budget"
-                      onClick={() => handleUnlinkBudget(wb)}
-                    >
-                      Unlink
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    className="spending-workbook-open-button"
-                    onClick={() => onOpenWorkbook(wb)}
-                  >
-                    Open
-                  </button>
+                  <ActionMenu
+                    label={`Actions for ${wb.name}`}
+                    items={[
+                      {
+                        key: 'quick-view',
+                        label: 'Quick View',
+                        onClick: () => onQuickView(wb)
+                      },
+                      {
+                        key: 'open',
+                        label: 'Open',
+                        onClick: () => onOpenWorkbook(wb)
+                      },
+                      !isUncategorized && {
+                        key: 'untag',
+                        label: 'Untag (remove from category)',
+                        onClick: () => handleUnlinkCategory(wb)
+                      },
+                      isExplicitlyAttached(wb) && {
+                        key: 'unlink',
+                        label: 'Unlink (remove from budget)',
+                        danger: true,
+                        onClick: () => handleUnlinkBudget(wb)
+                      }
+                    ]}
+                  />
                 </li>
               ))}
             </ul>
@@ -312,8 +378,11 @@ function BudgetCategoryNode({
                   onAddCategory={onAddCategory}
                   onDeleteCategory={onDeleteCategory}
                   onSetWorkbookCategory={onSetWorkbookCategory}
+                  onSetCategoryColor={onSetCategoryColor}
+                  onSetCategoryLimit={onSetCategoryLimit}
                   onUpdateBudget={onUpdateBudget}
                   onCreateWorkbook={onCreateWorkbook}
+                  onQuickView={onQuickView}
                   formatWithCommas={formatWithCommas}
                 />
               ))}
@@ -339,6 +408,8 @@ function BudgetDetail({
   onAddCategory,
   onDeleteCategory,
   onSetWorkbookCategory,
+  onSetCategoryColor,
+  onSetCategoryLimit,
   onUpdateBudget,
   onCreateWorkbook,
   formatWithCommas
@@ -347,6 +418,7 @@ function BudgetDetail({
   const [isAddingRootCategory, setIsAddingRootCategory] = useState(false);
   const [newRootCategoryName, setNewRootCategoryName] = useState('');
   const [isAddingWorkbook, setIsAddingWorkbook] = useState(false);
+  const [quickViewWorkbook, setQuickViewWorkbook] = useState(null);
 
   const unfiledExcludeIds = useMemo(
     () => new Set(budget.workbookIds || []),
@@ -364,7 +436,7 @@ function BudgetDetail({
   );
 
   const roots = useMemo(() => {
-    const buildNode = (nodeId, nodeName) => {
+    const buildNode = (nodeId, nodeName, nodeColor, nodeLimit) => {
       const directItems = matchedWorkbooks
         .filter(wb => (wb.categoryId || null) === nodeId)
         .sort((a, b) => new Date(b.paidAt || b.date) - new Date(a.paidAt || a.date));
@@ -375,7 +447,7 @@ function BudgetDetail({
       // parts - otherwise a freshly-created (still empty) subfolder would
       // have no way to be reached in order to add its first workbook.
       const children = getChildren(categories, nodeId)
-        .map(child => buildNode(child.id, child.name));
+        .map(child => buildNode(child.id, child.name, child.color, child.limit));
 
       const paidTotal = paidItems.reduce((sum, wb) => sum + (wb.amountPaid || 0), 0) +
         children.reduce((sum, c) => sum + c.paidTotal, 0);
@@ -385,7 +457,19 @@ function BudgetDetail({
       const unpaidCountNode = unpaidItems.length + children.reduce((sum, c) => sum + c.unpaidCount, 0);
       const itemCount = directItems.length + children.reduce((sum, c) => sum + c.itemCount, 0);
 
-      return { id: nodeId, name: nodeName, directItems, children, paidTotal, unpaidTotal, paidCount: paidCountNode, unpaidCount: unpaidCountNode, itemCount };
+      return {
+        id: nodeId,
+        name: nodeName,
+        color: nodeColor || null,
+        limit: nodeLimit ?? null,
+        directItems,
+        children,
+        paidTotal,
+        unpaidTotal,
+        paidCount: paidCountNode,
+        unpaidCount: unpaidCountNode,
+        itemCount
+      };
     };
 
     // Root categories: show any that are explicitly tracked by this budget
@@ -394,7 +478,7 @@ function BudgetDetail({
     // workbook explicitly attached under an otherwise-untracked category).
     const trackedIds = new Set(budget.categoryIds || []);
     const categoryRoots = getChildren(categories, null)
-      .map(c => buildNode(c.id, c.name))
+      .map(c => buildNode(c.id, c.name, c.color, c.limit))
       .filter(node => node.itemCount > 0 || trackedIds.has(node.id));
 
     const uncategorizedItems = matchedWorkbooks
@@ -406,6 +490,8 @@ function BudgetDetail({
       categoryRoots.push({
         id: UNCATEGORIZED_ID,
         name: 'Uncategorized',
+        color: null,
+        limit: null,
         directItems: uncategorizedItems,
         children: [],
         paidTotal: paidItems.reduce((sum, wb) => sum + (wb.amountPaid || 0), 0),
@@ -549,8 +635,11 @@ function BudgetDetail({
                 onAddCategory={onAddCategory}
                 onDeleteCategory={onDeleteCategory}
                 onSetWorkbookCategory={onSetWorkbookCategory}
+                onSetCategoryColor={onSetCategoryColor}
+                onSetCategoryLimit={onSetCategoryLimit}
                 onUpdateBudget={onUpdateBudget}
                 onCreateWorkbook={onCreateWorkbook}
+                onQuickView={setQuickViewWorkbook}
                 formatWithCommas={formatWithCommas}
               />
             ))}
@@ -561,6 +650,15 @@ function BudgetDetail({
           </p>
         )}
       </div>
+
+      {quickViewWorkbook && (
+        <WorkbookQuickView
+          workbook={quickViewWorkbook}
+          formatWithCommas={formatWithCommas}
+          onClose={() => setQuickViewWorkbook(null)}
+          onOpenFull={() => { onOpenWorkbook(quickViewWorkbook); setQuickViewWorkbook(null); }}
+        />
+      )}
     </div>
   );
 }
@@ -570,7 +668,7 @@ function BudgetDetail({
  * scope it tracks - any number of categories (rolled up through their
  * subcategories) plus any number of individually attached workbooks.
  */
-function BudgetForm({ initialBudget, categories, workbooks, onSave, onCancel }) {
+function BudgetForm({ initialBudget, categories, workbooks, onSave, onCancel, onCloneCategories }) {
   const [name, setName] = useState(initialBudget?.name || '');
   const [amount, setAmount] = useState(initialBudget ? String(initialBudget.amount) : '');
   const [period, setPeriod] = useState(initialBudget?.period || 'month');
@@ -579,6 +677,11 @@ function BudgetForm({ initialBudget, categories, workbooks, onSave, onCancel }) 
   const [categoryIds, setCategoryIds] = useState(() => new Set(initialBudget?.categoryIds || []));
   const [workbookIds, setWorkbookIds] = useState(() => new Set(initialBudget?.workbookIds || []));
   const [workbookSearch, setWorkbookSearch] = useState('');
+
+  // Categories already tracked by this budget before this editing session -
+  // only newly-checked ones (not these) get cloned into fresh empty copies
+  // on submit, so re-saving an existing budget doesn't re-clone its scope.
+  const originalCategoryIdsRef = useRef(new Set(initialBudget?.categoryIds || []));
 
   const categoryOptions = flattenTree(categories);
   const filteredWorkbooks = workbooks.filter(wb =>
@@ -605,13 +708,23 @@ function BudgetForm({ initialBudget, categories, workbooks, onSave, onCancel }) 
     const parsedAmount = parseFloat(amount);
     if (!name.trim() || !Number.isFinite(parsedAmount)) return;
 
+    // Selecting an existing category here should give this budget its own
+    // isolated copy, not link it to whatever is already filed under that
+    // category elsewhere - so only genuinely new selections get cloned;
+    // categories the budget already tracked keep their existing id.
+    const currentIds = Array.from(categoryIds);
+    const newlySelectedIds = currentIds.filter(id => !originalCategoryIdsRef.current.has(id));
+    const keptIds = currentIds.filter(id => originalCategoryIdsRef.current.has(id));
+    const cloneMapping = newlySelectedIds.length > 0 ? onCloneCategories(newlySelectedIds) : {};
+    const finalCategoryIds = [...keptIds, ...newlySelectedIds.map(id => cloneMapping[id] || id)];
+
     onSave({
       name: name.trim(),
       amount: parsedAmount,
       period,
       customFrom,
       customTo,
-      categoryIds: Array.from(categoryIds),
+      categoryIds: finalCategoryIds,
       workbookIds: Array.from(workbookIds)
     });
   };
@@ -752,6 +865,9 @@ function BudgetManagerDialog({
   onAddCategory,
   onDeleteCategory,
   onSetWorkbookCategory,
+  onSetCategoryColor,
+  onSetCategoryLimit,
+  onCloneCategories,
   onCreateWorkbook,
   formatWithCommas
 }) {
@@ -845,6 +961,7 @@ function BudgetManagerDialog({
             categories={categories}
             workbooks={workbooks}
             onSave={handleSave}
+            onCloneCategories={onCloneCategories}
             onCancel={() => { setMode('list'); setEditingBudget(null); }}
           />
         ) : mode === 'detail' && viewingBudget ? (
@@ -857,6 +974,8 @@ function BudgetManagerDialog({
             onAddCategory={onAddCategory}
             onDeleteCategory={onDeleteCategory}
             onSetWorkbookCategory={onSetWorkbookCategory}
+            onSetCategoryColor={onSetCategoryColor}
+            onSetCategoryLimit={onSetCategoryLimit}
             onUpdateBudget={onUpdateBudget}
             onCreateWorkbook={handleCreateWorkbookFromDetail}
             formatWithCommas={formatWithCommas}
@@ -932,23 +1051,29 @@ function BudgetManagerDialog({
 const categoryShape = PropTypes.shape({
   id: PropTypes.string.isRequired,
   name: PropTypes.string.isRequired,
-  parentId: PropTypes.string
+  parentId: PropTypes.string,
+  color: PropTypes.string,
+  limit: PropTypes.number
 });
 
 const workbookShape = PropTypes.shape({
   id: PropTypes.string.isRequired,
   name: PropTypes.string,
+  content: PropTypes.string,
   date: PropTypes.string,
   displayDate: PropTypes.string,
   isPaid: PropTypes.bool,
   amountPaid: PropTypes.number,
   paidAt: PropTypes.string,
+  paidAtDisplay: PropTypes.string,
   categoryId: PropTypes.string
 });
 
 const budgetCategoryNodeShape = PropTypes.shape({
   id: PropTypes.string.isRequired,
   name: PropTypes.string.isRequired,
+  color: PropTypes.string,
+  limit: PropTypes.number,
   directItems: PropTypes.arrayOf(workbookShape).isRequired,
   children: PropTypes.array.isRequired,
   paidTotal: PropTypes.number.isRequired,
@@ -987,8 +1112,11 @@ BudgetCategoryNode.propTypes = {
   onAddCategory: PropTypes.func.isRequired,
   onDeleteCategory: PropTypes.func.isRequired,
   onSetWorkbookCategory: PropTypes.func.isRequired,
+  onSetCategoryColor: PropTypes.func.isRequired,
+  onSetCategoryLimit: PropTypes.func.isRequired,
   onUpdateBudget: PropTypes.func.isRequired,
   onCreateWorkbook: PropTypes.func.isRequired,
+  onQuickView: PropTypes.func.isRequired,
   formatWithCommas: PropTypes.func.isRequired
 };
 
@@ -1001,6 +1129,8 @@ BudgetDetail.propTypes = {
   onAddCategory: PropTypes.func.isRequired,
   onDeleteCategory: PropTypes.func.isRequired,
   onSetWorkbookCategory: PropTypes.func.isRequired,
+  onSetCategoryColor: PropTypes.func.isRequired,
+  onSetCategoryLimit: PropTypes.func.isRequired,
   onUpdateBudget: PropTypes.func.isRequired,
   onCreateWorkbook: PropTypes.func.isRequired,
   formatWithCommas: PropTypes.func.isRequired
@@ -1019,7 +1149,8 @@ BudgetForm.propTypes = {
   categories: PropTypes.arrayOf(categoryShape).isRequired,
   workbooks: PropTypes.arrayOf(workbookShape).isRequired,
   onSave: PropTypes.func.isRequired,
-  onCancel: PropTypes.func.isRequired
+  onCancel: PropTypes.func.isRequired,
+  onCloneCategories: PropTypes.func.isRequired
 };
 
 BudgetManagerDialog.propTypes = {
@@ -1044,6 +1175,9 @@ BudgetManagerDialog.propTypes = {
   onAddCategory: PropTypes.func.isRequired,
   onDeleteCategory: PropTypes.func.isRequired,
   onSetWorkbookCategory: PropTypes.func.isRequired,
+  onSetCategoryColor: PropTypes.func.isRequired,
+  onSetCategoryLimit: PropTypes.func.isRequired,
+  onCloneCategories: PropTypes.func.isRequired,
   onCreateWorkbook: PropTypes.func.isRequired,
   formatWithCommas: PropTypes.func.isRequired
 };

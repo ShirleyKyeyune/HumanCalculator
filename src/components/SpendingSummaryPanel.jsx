@@ -20,7 +20,14 @@ function SpendingCategoryNode({
   formatWithCommas,
   autoExpand
 }) {
-  const pct = parentTotal > 0 ? (node.rollupTotal / parentTotal) * 100 : 0;
+  const hasLimit = node.limit != null;
+  const isOverLimit = hasLimit && node.rollupTotal > node.limit;
+  // With its own limit set, show progress against that instead of this
+  // node's share of its parent's total - a much more useful number once a
+  // real budget ceiling exists for the folder.
+  const pct = hasLimit
+    ? (node.limit > 0 ? Math.min(100, (node.rollupTotal / node.limit) * 100) : 100)
+    : (parentTotal > 0 ? (node.rollupTotal / parentTotal) * 100 : 0);
   const isExpanded = autoExpand || expandedIds.has(node.id);
 
   return (
@@ -35,14 +42,24 @@ function SpendingCategoryNode({
           <span className={`spending-expand-caret ${isExpanded ? 'expanded' : ''}`}>&#9656;</span>
           {node.name}
         </span>
-        <span className="spending-category-total">{formatWithCommas(node.rollupTotal)}</span>
+        <span className="spending-category-total">
+          {formatWithCommas(node.rollupTotal)}
+          {hasLimit && <span className="spending-category-limit-suffix"> / {formatWithCommas(node.limit)}</span>}
+        </span>
       </button>
       <div className="spending-category-bar-track">
-        <div className="spending-category-bar-fill" style={{ width: `${pct}%` }} />
+        <div
+          className={`spending-category-bar-fill ${isOverLimit ? 'over-budget' : ''}`}
+          style={{ width: `${pct}%` }}
+        />
       </div>
       <div className="spending-category-meta">
         <span>{node.rollupCount} paid item{node.rollupCount === 1 ? '' : 's'}</span>
-        <span>{pct.toFixed(1)}%</span>
+        <span>
+          {hasLimit
+            ? (isOverLimit ? `${formatWithCommas(node.rollupTotal - node.limit)} over` : `${pct.toFixed(1)}% of limit`)
+            : `${pct.toFixed(1)}%`}
+        </span>
       </div>
 
       {isExpanded && (
@@ -134,20 +151,22 @@ function SpendingSummaryPanel({ isVisible, onClose, workbooks, categories, onOpe
     [filteredPaid]
   );
 
-  const buildNode = (nodeId, nodeName) => {
+  const buildNode = (nodeId, nodeName, nodeLimit) => {
     const directItems = filteredPaid
       .filter(wb => (wb.categoryId || null) === nodeId)
       .sort((a, b) => new Date(b.paidAt) - new Date(a.paidAt));
     const directTotal = directItems.reduce((sum, wb) => sum + (wb.amountPaid || 0), 0);
 
     const children = getChildren(categories, nodeId)
-      .map(child => buildNode(child.id, child.name))
-      .filter(child => child.rollupTotal > 0);
+      .map(child => buildNode(child.id, child.name, child.limit))
+      // Keep a child around if it has spend to show, or a limit to track
+      // progress against even while still at zero.
+      .filter(child => child.rollupTotal > 0 || child.limit != null);
 
     const rollupTotal = directTotal + children.reduce((sum, c) => sum + c.rollupTotal, 0);
     const rollupCount = directItems.length + children.reduce((sum, c) => sum + c.rollupCount, 0);
 
-    return { id: nodeId, name: nodeName, directItems, directTotal, children, rollupTotal, rollupCount };
+    return { id: nodeId, name: nodeName, limit: nodeLimit ?? null, directItems, directTotal, children, rollupTotal, rollupCount };
   };
 
   const roots = useMemo(() => {
@@ -157,19 +176,20 @@ function SpendingSummaryPanel({ isVisible, onClose, workbooks, categories, onOpe
     }
 
     if (categoryFilter !== 'all') {
-      const match = categoryFilterOptions.find(c => c.id === categoryFilter);
-      return [buildNode(categoryFilter, match ? match.name : 'Category')];
+      const match = categories.find(c => c.id === categoryFilter);
+      return [buildNode(categoryFilter, match ? match.name : 'Category', match ? match.limit : null)];
     }
 
     const categoryRoots = getChildren(categories, null)
-      .map(c => buildNode(c.id, c.name))
-      .filter(node => node.rollupTotal > 0);
+      .map(c => buildNode(c.id, c.name, c.limit))
+      .filter(node => node.rollupTotal > 0 || node.limit != null);
 
     const uncategorizedItems = filteredPaid.filter(wb => !wb.categoryId);
     if (uncategorizedItems.length > 0) {
       categoryRoots.push({
         id: UNCATEGORIZED_ID,
         name: 'Uncategorized',
+        limit: null,
         directItems: uncategorizedItems.sort((a, b) => new Date(b.paidAt) - new Date(a.paidAt)),
         directTotal: uncategorizedItems.reduce((sum, wb) => sum + (wb.amountPaid || 0), 0),
         children: [],
@@ -318,13 +338,15 @@ function SpendingSummaryPanel({ isVisible, onClose, workbooks, categories, onOpe
 const categoryShape = PropTypes.shape({
   id: PropTypes.string.isRequired,
   name: PropTypes.string.isRequired,
-  parentId: PropTypes.string
+  parentId: PropTypes.string,
+  limit: PropTypes.number
 });
 
 SpendingCategoryNode.propTypes = {
   node: PropTypes.shape({
     id: PropTypes.string.isRequired,
     name: PropTypes.string.isRequired,
+    limit: PropTypes.number,
     directItems: PropTypes.array.isRequired,
     directTotal: PropTypes.number.isRequired,
     children: PropTypes.array.isRequired,

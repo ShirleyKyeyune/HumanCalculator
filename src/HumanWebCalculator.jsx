@@ -152,7 +152,16 @@ export default function HumanWebCalculator({
   } = useWorkbookManager(text, setText, workbookName, setWorkbookName, showSaveDialog, setShowSaveDialog);
 
   // Use the categories hook to manage the expense category tree
-  const { categories, addCategory, renameCategory, deleteCategory } = useCategories();
+  const {
+    categories,
+    addCategory,
+    createIsolatedCategory,
+    cloneCategoriesAsEmpty,
+    renameCategory,
+    deleteCategory,
+    setCategoryColor,
+    setCategoryLimit
+  } = useCategories();
 
   // Use the budgets hook to manage spending budgets
   const {
@@ -756,7 +765,11 @@ export default function HumanWebCalculator({
         onAddCategory={addCategory}
         onRenameCategory={renameCategory}
         onDeleteCategory={handleDeleteCategory}
+        onSetCategoryColor={setCategoryColor}
+        onSetCategoryLimit={setCategoryLimit}
         onMoveWorkbook={handleMoveWorkbookToCategory}
+        onOpenWorkbook={loadWorkbook}
+        formatWithCommas={formatWithCommas}
       />
 
       {/* Budget Manager */}
@@ -770,9 +783,12 @@ export default function HumanWebCalculator({
         onUpdateBudget={updateBudget}
         onDeleteBudget={deleteBudget}
         onOpenWorkbook={loadWorkbook}
-        onAddCategory={addCategory}
+        onAddCategory={createIsolatedCategory}
         onDeleteCategory={handleDeleteCategory}
         onSetWorkbookCategory={handleSetWorkbookCategory}
+        onSetCategoryColor={setCategoryColor}
+        onSetCategoryLimit={setCategoryLimit}
+        onCloneCategories={cloneCategoriesAsEmpty}
         onCreateWorkbook={createNewWorkbook}
         formatWithCommas={formatWithCommas}
       />
@@ -863,7 +879,17 @@ export default function HumanWebCalculator({
       {showSaveDialog && (
         <div className="dialog-overlay">
           <div className="dialog">
-            <h3>Save Workbook</h3>
+            <div className="dialog-header">
+              <h3>Save Workbook</h3>
+              <button
+                type="button"
+                className="close-panel-button"
+                onClick={() => setShowSaveDialog(false)}
+                aria-label="Close"
+              >
+                &times;
+              </button>
+            </div>
             <div className="dialog-content">
               <label htmlFor="workbook-name">Workbook Name:</label>
               <input
@@ -890,7 +916,17 @@ export default function HumanWebCalculator({
       {showExportDialog && (
         <div className="dialog-overlay">
           <div className="dialog">
-            <h3>Export Options</h3>
+            <div className="dialog-header">
+              <h3>Export Options</h3>
+              <button
+                type="button"
+                className="close-panel-button"
+                onClick={() => setShowExportDialog(false)}
+                aria-label="Close"
+              >
+                &times;
+              </button>
+            </div>
             <div className="dialog-content">
               <div className="export-options">
                 <label className="export-option">
@@ -948,7 +984,17 @@ export default function HumanWebCalculator({
       {showImportDialog && (
         <div className="dialog-overlay">
           <div className="dialog">
-            <h3>Import Workbook</h3>
+            <div className="dialog-header">
+              <h3>Import Workbook</h3>
+              <button
+                type="button"
+                className="close-panel-button"
+                onClick={() => setShowImportDialog(false)}
+                aria-label="Close"
+              >
+                &times;
+              </button>
+            </div>
             <div className="dialog-content">
               <div className="import-tabs">
                 <button className="import-tab active">Saved</button>
