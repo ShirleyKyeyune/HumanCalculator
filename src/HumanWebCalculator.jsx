@@ -130,6 +130,7 @@ export default function HumanWebCalculator({
   const fileInputRef = useRef(null);
   const resultsContainerRef = useRef(null);
   const historyPanelRef = useRef(null);
+  const lineGutterRef = useRef(null);
 
   // Mirror the latest text/total into refs so callbacks that need the
   // "current" calculation (e.g. saveToHistory) can stay referentially
@@ -636,6 +637,29 @@ export default function HumanWebCalculator({
     reader.readAsText(file);
   };
 
+  // Keep the per-line action gutter's scroll position in sync with the
+  // textarea's own internal scroll - the gutter has no scrollbar of its
+  // own, it just mirrors whatever's currently visible.
+  const handleTextareaScroll = (e) => {
+    if (lineGutterRef.current) {
+      lineGutterRef.current.scrollTop = e.target.scrollTop;
+    }
+  };
+
+  // Remove a single line (by its raw line index, including blank lines) from the textarea.
+  const handleDeleteLine = (lineIndex) => {
+    const lines = text.split(/\r?\n/);
+    lines.splice(lineIndex, 1);
+    setText(lines.join('\n'));
+  };
+
+  // Duplicate a single line, inserting the copy directly below it.
+  const handleDuplicateLine = (lineIndex) => {
+    const lines = text.split(/\r?\n/);
+    lines.splice(lineIndex + 1, 0, lines[lineIndex]);
+    setText(lines.join('\n'));
+  };
+
   return (
     <div className="calculator-container">
 
@@ -830,13 +854,40 @@ export default function HumanWebCalculator({
                 <QRCodeIcon className="icon" />
               </button>
             </div>
-            <textarea
-              ref={textareaRef}
-              value={text}
-              onChange={e => setText(e.target.value)}
-              className="calculator-textarea"
-              spellCheck="false"
-            />
+            <div className="calculator-textarea-row">
+              <textarea
+                ref={textareaRef}
+                value={text}
+                onChange={e => setText(e.target.value)}
+                onScroll={handleTextareaScroll}
+                className="calculator-textarea"
+                spellCheck="false"
+              />
+              <div className="line-actions-gutter" ref={lineGutterRef}>
+                {text.split(/\r?\n/).map((line, idx) => (
+                  <div key={idx} className="line-actions-row">
+                    <button
+                      type="button"
+                      className="line-action-button duplicate"
+                      onClick={() => handleDuplicateLine(idx)}
+                      title="Duplicate line"
+                      aria-label={`Duplicate line ${idx + 1}`}
+                    >
+                      ⧉
+                    </button>
+                    <button
+                      type="button"
+                      className="line-action-button delete"
+                      onClick={() => handleDeleteLine(idx)}
+                      title="Delete line"
+                      aria-label={`Delete line ${idx + 1}`}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Right panel */}

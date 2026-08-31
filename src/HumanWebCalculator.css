@@ -177,6 +177,13 @@ body {
   color: white;
 }
 
+.calculator-textarea-row {
+  display: flex;
+  flex: 1;
+  gap: 0.375rem;
+  min-height: 0;
+}
+
 .calculator-textarea {
   flex: 1;
   resize: none;
@@ -186,9 +193,16 @@ body {
   background-color: #f7fafc;
   font-family: monospace;
   font-size: 1rem;
+  line-height: 1.75rem;
   color: #1a202c;
   transition: all 0.3s;
   min-height: 300px;
+  /* Each typed line must map to exactly one visual row so the line-actions
+     gutter's rows line up with it - wrapping a long line would otherwise
+     push every row below it out of alignment. Long lines scroll
+     horizontally instead. */
+  white-space: pre;
+  overflow-x: auto;
 }
 
 .calculator-textarea:focus {
@@ -201,6 +215,93 @@ body {
   background-color: #4a5568;
   border-color: #4a5568;
   color: #e2e8f0;
+}
+
+/* Delete/duplicate panel to the right of the textarea, outside its box -
+   one row per typed line, kept in sync with the textarea's own scroll via
+   a transparent border/padding that mirrors the textarea's box model
+   exactly, so row N always sits level with line N. */
+.line-actions-gutter {
+  flex-shrink: 0;
+  width: 4.25rem;
+  padding: 1rem 0;
+  border: 1px solid transparent;
+  overflow: hidden;
+}
+
+.line-actions-row {
+  height: 1.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.line-action-button {
+  width: 1.4rem;
+  height: 1.4rem;
+  margin: 0.1rem 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  transition: transform 0.1s, background-color 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.line-action-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.line-action-button:active {
+  transform: translateY(0);
+}
+
+.line-action-button.duplicate {
+  background-color: #e9d8fd;
+  color: #6b46c1;
+}
+
+.line-action-button.duplicate:hover {
+  background-color: #d6bcfa;
+  color: #553c9a;
+}
+
+.line-action-button.delete {
+  background-color: #fed7d7;
+  color: #c53030;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.line-action-button.delete:hover {
+  background-color: #fc8181;
+  color: white;
+}
+
+.dark .line-action-button.duplicate {
+  background-color: #44337a;
+  color: #d6bcfa;
+}
+
+.dark .line-action-button.duplicate:hover {
+  background-color: #553c9a;
+  color: #e9d8fd;
+}
+
+.dark .line-action-button.delete {
+  background-color: #742a2a;
+  color: #fc8181;
+}
+
+.dark .line-action-button.delete:hover {
+  background-color: #9b2c2c;
+  color: white;
 }
 
 .results-container {
