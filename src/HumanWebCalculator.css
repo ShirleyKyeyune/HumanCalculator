@@ -1772,3 +1772,252 @@ body {
     text-align: left;
   }
 }
+
+/* Payment dialog styles */
+.payment-dialog {
+  max-width: 420px;
+}
+
+.payment-dialog-workbook-name {
+  margin: -0.5rem 0 1rem;
+  color: #718096;
+  font-size: 0.9rem;
+}
+
+.dark .payment-dialog-workbook-name {
+  color: #a0aec0;
+}
+
+.payment-section-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #718096;
+  margin: 1rem 0 0.5rem;
+}
+
+.payment-section-label:first-child {
+  margin-top: 0;
+}
+
+.dark .payment-section-label {
+  color: #a0aec0;
+}
+
+.payment-quick-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.payment-quick-button {
+  flex: 1;
+  min-width: 90px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+  background-color: white;
+  color: #4a5568;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.payment-quick-button:hover {
+  background-color: #f0f4f8;
+}
+
+.payment-quick-button.active {
+  background-color: #9f7aea;
+  border-color: #9f7aea;
+  color: white;
+}
+
+.dark .payment-quick-button {
+  background-color: #4a5568;
+  border-color: #4a5568;
+  color: #e2e8f0;
+}
+
+.dark .payment-quick-button:hover {
+  background-color: #2d3748;
+}
+
+.dark .payment-quick-button.active {
+  background-color: #6b46c1;
+  border-color: #6b46c1;
+  color: white;
+}
+
+.category-select-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.category-select {
+  margin-top: 0;
+  cursor: pointer;
+}
+
+.category-add-inline {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  align-items: center;
+}
+
+.category-add-inline .dialog-input {
+  margin-top: 0;
+  flex: 1;
+}
+
+.category-add-button,
+.category-cancel-button {
+  padding: 0.5rem 0.75rem;
+  border: none;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.2s;
+}
+
+.category-add-button {
+  background-color: #9f7aea;
+  color: white;
+}
+
+.category-add-button:hover {
+  background-color: #805ad5;
+}
+
+.dark .category-add-button {
+  background-color: #6b46c1;
+}
+
+.dark .category-add-button:hover {
+  background-color: #553c9a;
+}
+
+.category-cancel-button {
+  background-color: #e2e8f0;
+  color: #4a5568;
+}
+
+.category-cancel-button:hover {
+  background-color: #cbd5e0;
+}
+
+.dark .category-cancel-button {
+  background-color: #4a5568;
+  color: #e2e8f0;
+}
+
+.dark .category-cancel-button:hover {
+  background-color: #2d3748;
+}
+
+.payment-dialog-buttons {
+  flex-wrap: wrap;
+}
+
+.dialog-button.remove-payment {
+  background-color: transparent;
+  color: #e53e3e;
+  border: 1px solid #fed7d7;
+  margin-right: auto;
+}
+
+.dialog-button.remove-payment:hover {
+  background-color: #fff5f5;
+}
+
+.dark .dialog-button.remove-payment {
+  color: #fc8181;
+  border-color: #63171b;
+}
+
+.dark .dialog-button.remove-payment:hover {
+  background-color: #3b1414;
+}
+
+/* Payment status badges (workbook list & search results) */
+.workbook-payment-status,
+.search-result-payment-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-top: 0.375rem;
+}
+
+.workbook-paid-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+}
+
+.workbook-paid-badge.paid {
+  background-color: #c6f6d5;
+  color: #276749;
+}
+
+.workbook-paid-badge.unpaid {
+  background-color: #edf2f7;
+  color: #718096;
+}
+
+.dark .workbook-paid-badge.paid {
+  background-color: #22543d;
+  color: #9ae6b4;
+}
+
+.dark .workbook-paid-badge.unpaid {
+  background-color: #4a5568;
+  color: #cbd5e0;
+}
+
+.workbook-category-tag {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  background-color: #e9d8fd;
+  color: #553c9a;
+}
+
+.dark .workbook-category-tag {
+  background-color: #44337a;
+  color: #d6bcfa;
+}
+
+.workbook-action-button.mark-paid {
+  color: #38a169;
+}
+
+.dark .workbook-action-button.mark-paid {
+  color: #68d391;
+}
+
+.search-result-action-button.mark-paid {
+  background-color: #e2e8f0;
+  color: #38a169;
+}
+
+.search-result-action-button.mark-paid:hover {
+  background-color: #cbd5e0;
+}
+
+.dark .search-result-action-button.mark-paid {
+  background-color: #2d3748;
+  color: #68d391;
+}
+
+.dark .search-result-action-button.mark-paid:hover {
+  background-color: #1a202c;
+}

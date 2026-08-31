@@ -48,22 +48,22 @@ function useWorkbookManager(text, setText, workbookName, setWorkbookName, showSa
    * from the last saved workbook
    * 
    * @param {boolean} forceSave - If true, save regardless of content similarity
-   * @returns {boolean} - Whether a new workbook was saved
+   * @returns {object|null} - The saved workbook, or null if nothing was saved
    */
   const saveWorkbook = useCallback((forceSave = false) => {
     // Don't save empty workbooks
-    if (!text.trim()) return false;
-    
+    if (!text.trim()) return null;
+
     // Check if this content is significantly different from the last saved workbook
     const lastWorkbook = savedWorkbooks.length > 0 ? savedWorkbooks[savedWorkbooks.length - 1] : null;
-    
+
     // If not forcing save, check if content is similar to avoid duplicates
     if (!forceSave && lastWorkbook && lastWorkbook.content === text) {
       console.log('Workbook content unchanged, skipping save');
       setShowSaveDialog(false);
-      return false;
+      return null;
     }
-    
+
     const now = new Date();
     const formattedDate = formatDateForDisplay(now);
     const workbook = {
@@ -71,15 +71,58 @@ function useWorkbookManager(text, setText, workbookName, setWorkbookName, showSa
       name: workbookName || `Workbook ${formattedDate}`,
       content: text,
       date: now.toISOString(),
-      displayDate: formattedDate
+      displayDate: formattedDate,
+      // Payment tracking - kept flat so this stays simple, plain JSON
+      // that can sync to a file-based backend (e.g. Google Drive) later.
+      isPaid: false,
+      amountPaid: null,
+      paidAt: null,
+      paidAtDisplay: null,
+      category: null,
+      categoryId: null,
+      subcategory: null,
+      subcategoryId: null
     };
 
     const updatedWorkbooks = [...savedWorkbooks, workbook];
     setSavedWorkbooks(updatedWorkbooks);
     localStorage.setItem('humanCalculatorWorkbooks', JSON.stringify(updatedWorkbooks));
     setShowSaveDialog(false);
-    return true;
+    return workbook;
   }, [text, savedWorkbooks, workbookName, setShowSaveDialog, formatDateForDisplay]);
+
+  /**
+   * Get the saved workbook record that represents the current editor content,
+   * saving it first (if needed) so payment/category info always has a
+   * workbook id to attach to.
+   *
+   * @returns {object|null} - The current workbook record, or null if the
+   * editor is empty
+   */
+  const getCurrentWorkbookRecord = useCallback(() => {
+    if (!text.trim()) return null;
+
+    const lastWorkbook = savedWorkbooks.length > 0 ? savedWorkbooks[savedWorkbooks.length - 1] : null;
+    if (lastWorkbook && lastWorkbook.content === text) {
+      return lastWorkbook;
+    }
+
+    return saveWorkbook(true);
+  }, [text, savedWorkbooks, saveWorkbook]);
+
+  /**
+   * Update payment/category info on a saved workbook.
+   *
+   * @param {string} id - The workbook id to update
+   * @param {object} paymentData - Fields to merge onto the workbook
+   */
+  const updateWorkbookPayment = useCallback((id, paymentData) => {
+    const updatedWorkbooks = savedWorkbooks.map(wb =>
+      wb.id === id ? { ...wb, ...paymentData } : wb
+    );
+    setSavedWorkbooks(updatedWorkbooks);
+    localStorage.setItem('humanCalculatorWorkbooks', JSON.stringify(updatedWorkbooks));
+  }, [savedWorkbooks]);
 
   /**
    * Create a new workbook after saving the current one if needed
@@ -173,7 +216,9 @@ function useWorkbookManager(text, setText, workbookName, setWorkbookName, showSa
     loadWorkbook,
     deleteWorkbook,
     createNewWorkbook,
-    formatDateForDisplay
+    formatDateForDisplay,
+    getCurrentWorkbookRecord,
+    updateWorkbookPayment
   };
 }
 

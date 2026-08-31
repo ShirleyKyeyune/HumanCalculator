@@ -25,6 +25,7 @@ function SearchPanel({
   history,
   onOpenWorkbook,
   onOpenHistory,
+  onMarkPaid,
   formatWithCommas
 }) {
   const [query, setQuery] = useState('');
@@ -161,6 +162,23 @@ function SearchPanel({
                     )}
                     <span className="search-result-date">{result.displayDate}</span>
                   </div>
+                  {result.type === 'workbook' && (
+                    <div className="search-result-payment-status">
+                      {result.raw.isPaid ? (
+                        <span className="workbook-paid-badge paid">
+                          Paid {formatWithCommas(result.raw.amountPaid || 0)}
+                        </span>
+                      ) : (
+                        <span className="workbook-paid-badge unpaid">Unpaid</span>
+                      )}
+                      {result.raw.category && (
+                        <span className="workbook-category-tag">
+                          {result.raw.category}
+                          {result.raw.subcategory ? ` › ${result.raw.subcategory}` : ''}
+                        </span>
+                      )}
+                    </div>
+                  )}
                   <div className="search-result-actions">
                     <button
                       className="search-result-action-button preview"
@@ -168,6 +186,14 @@ function SearchPanel({
                     >
                       {isExpanded ? 'Hide' : 'Preview'}
                     </button>
+                    {result.type === 'workbook' && (
+                      <button
+                        className="search-result-action-button mark-paid"
+                        onClick={() => onMarkPaid(result.raw)}
+                      >
+                        {result.raw.isPaid ? 'Edit Payment' : 'Mark Paid'}
+                      </button>
+                    )}
                     <button
                       className="search-result-action-button open"
                       onClick={() => handleOpen(result)}
@@ -212,6 +238,7 @@ SearchPanel.propTypes = {
   ).isRequired,
   onOpenWorkbook: PropTypes.func.isRequired,
   onOpenHistory: PropTypes.func.isRequired,
+  onMarkPaid: PropTypes.func.isRequired,
   formatWithCommas: PropTypes.func.isRequired
 };
 

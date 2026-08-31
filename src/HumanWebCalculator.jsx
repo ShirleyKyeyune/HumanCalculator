@@ -7,10 +7,12 @@ import { jsPDF } from "jspdf";
 import * as XLSX from "xlsx";
 import HistoryPanel from "./components/HistoryPanel";
 import SearchPanel from "./components/SearchPanel";
+import PaymentDialog from "./components/PaymentDialog";
 import QRCodeDisplay from "./components/QRCodeDisplay";
 import MobileMoneyCalculator from "./components/MobileMoneyCalculator";
 import { QRCodeIcon } from "./icons/Icons";
 import useWorkbookManager from "./hooks/useWorkbookManager";
+import useCategories from "./hooks/useCategories";
 
 /* ─────────────  Helper functions  ───────────── */
 const parserOptions = { operators: { assignment: true } };
@@ -80,6 +82,8 @@ export default function HumanWebCalculator({
   const [calculationHistory, setCalculationHistory] = useState([]);
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
   const [showSearchPanel, setShowSearchPanel] = useState(false);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [paymentTargetWorkbook, setPaymentTargetWorkbook] = useState(null);
   const [showQRCode, setShowQRCode] = useState(false);
   const [qrCodeContent, setQRCodeContent] = useState('');
   const textareaRef = useRef(null);
@@ -94,9 +98,13 @@ export default function HumanWebCalculator({
     saveWorkbook,
     loadWorkbook,
     deleteWorkbook,
-    createNewWorkbook
-    // formatDateForDisplay is available but not used in this component
+    createNewWorkbook,
+    getCurrentWorkbookRecord,
+    updateWorkbookPayment
   } = useWorkbookManager(text, setText, workbookName, setWorkbookName, showSaveDialog, setShowSaveDialog);
+
+  // Use the categories hook to manage expense categories/subcategories
+  const { categories, addCategory, addSubcategory } = useCategories();
 
   // Dark mode toggle moved to App component
 
@@ -117,6 +125,30 @@ export default function HumanWebCalculator({
   // Toggle search panel
   const toggleSearchPanel = () => {
     setShowSearchPanel(prev => !prev);
+  };
+
+  // Open the payment dialog for the workbook currently loaded in the editor,
+  // saving it first if it hasn't been saved yet
+  const openPaymentDialogForCurrent = () => {
+    const currentWorkbook = getCurrentWorkbookRecord();
+    if (!currentWorkbook) return;
+    setPaymentTargetWorkbook(currentWorkbook);
+    setShowPaymentDialog(true);
+  };
+
+  // Open the payment dialog for a specific saved workbook (e.g. from a list)
+  const openPaymentDialogForWorkbook = (workbook) => {
+    setPaymentTargetWorkbook(workbook);
+    setShowPaymentDialog(true);
+  };
+
+  const closePaymentDialog = () => {
+    setShowPaymentDialog(false);
+    setPaymentTargetWorkbook(null);
+  };
+
+  const handleSavePayment = (id, paymentData) => {
+    updateWorkbookPayment(id, paymentData);
   };
 
   // Toggle QR code display
@@ -510,6 +542,13 @@ export default function HumanWebCalculator({
         Search
       </button>
       <button
+        id="mark-paid-trigger"
+        onClick={openPaymentDialogForCurrent}
+        style={{ display: 'none' }}
+      >
+        Mark as Paid
+      </button>
+      <button
         id="new-workbook-trigger"
         onClick={createNewWorkbook}
         style={{ display: 'none' }}
@@ -537,6 +576,22 @@ export default function HumanWebCalculator({
         history={calculationHistory}
         onOpenWorkbook={loadWorkbook}
         onOpenHistory={loadFromHistory}
+        onMarkPaid={(workbook) => {
+          setShowSearchPanel(false);
+          openPaymentDialogForWorkbook(workbook);
+        }}
+        formatWithCommas={formatWithCommas}
+      />
+
+      {/* Payment Dialog */}
+      <PaymentDialog
+        isVisible={showPaymentDialog}
+        onClose={closePaymentDialog}
+        workbook={paymentTargetWorkbook}
+        categories={categories}
+        onAddCategory={addCategory}
+        onAddSubcategory={addSubcategory}
+        onSave={handleSavePayment}
         formatWithCommas={formatWithCommas}
       />
 
@@ -715,6 +770,22 @@ export default function HumanWebCalculator({
                           <span className="workbook-date">
                             {workbook.displayDate || formatDate(workbook.date)}
                           </span>
+                          <div className="workbook-payment-status">
+                            {workbook.isPaid ? (
+                              <span className="workbook-paid-badge paid">
+                                Paid {formatWithCommas(workbook.amountPaid || 0)}
+                                {workbook.paidAtDisplay ? ` · ${workbook.paidAtDisplay}` : ''}
+                              </span>
+                            ) : (
+                              <span className="workbook-paid-badge unpaid">Unpaid</span>
+                            )}
+                            {workbook.category && (
+                              <span className="workbook-category-tag">
+                                {workbook.category}
+                                {workbook.subcategory ? ` › ${workbook.subcategory}` : ''}
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <div className="workbook-actions">
                           <button
@@ -722,6 +793,12 @@ export default function HumanWebCalculator({
                             className="workbook-action-button load"
                           >
                             Load
+                          </button>
+                          <button
+                            onClick={() => openPaymentDialogForWorkbook(workbook)}
+                            className="workbook-action-button mark-paid"
+                          >
+                            {workbook.isPaid ? 'Edit Payment' : 'Mark Paid'}
                           </button>
                           <button
                             onClick={() => deleteWorkbook(workbook.id)}
